@@ -1,4 +1,5 @@
-using EcologyInformedML, Test, ForwardDiff, PyPlot
+using EcologyInformedML, Test, ForwardDiff, PyPlot, OrdinaryDiffEq
+using DiffEqSensitivity: ForwardDiffSensitivity
 using Revise
 
 @testset "EcologyInformedML" begin

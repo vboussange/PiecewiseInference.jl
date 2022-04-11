@@ -36,7 +36,6 @@ function minibatch_loss(
     continuity_term::Real=100,
     kwargs...
 )
-
     dim_prob = length(prob.u0)
     nb_group = length(ranges)
     @assert length(θ) > nb_group * dim_prob "`params` should contain [u0;p]"
@@ -57,7 +56,9 @@ function minibatch_loss(
 
         û = sol |> Array
         loss += loss_function(u, û)
-        group_predictions[i] = û
+        Zygote.ignore() do # this relates to issue https://github.com/FluxML/Zygote.jl/issues/571
+            group_predictions[i] = û
+        end
         if i < nb_group
             # Ensure continuity between last state in previous prediction
             # and current initial condition in ode_data

@@ -12,7 +12,7 @@ p_init= [1., 2.]
 
 u0 = ones(2)
 prob = ODEProblem(dudt, u0, tspan, p_true)
-sol_data = solve(prob, Tsit5(), tspan = tspan, saveat = tsteps, sensealg = ForwardSensitivity())
+sol_data = solve(prob, Tsit5(), tspan = tspan, saveat = tsteps, sensealg = ForwardDiffSensitivity())
 ode_data = Array(sol_data)
 
 loss_function(data, pred) = sum(abs2, data - pred)
@@ -31,7 +31,7 @@ loss_function(data, pred) = sum(abs2, data - pred)
                         loss_function, 
                         Tsit5(), 
                         ranges, 
-                        sensealg = ForwardSensitivity())
+                        sensealg = ForwardDiffSensitivity())
     @test isa(l, Number)
     @test isa(pred, Vector)
 end
@@ -44,7 +44,7 @@ end
                         loss_function, 
                         Tsit5(), 
                         ranges, 
-                        sensealg = ForwardSensitivity())[1]
+                        sensealg = ForwardDiffSensitivity())[1]
     l = _loss(θ)
     mygrad = ForwardDiff.gradient(_loss, θ)
     @test length(mygrad) == length(θ)

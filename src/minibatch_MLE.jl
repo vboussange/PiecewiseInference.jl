@@ -1,4 +1,3 @@
-
 """
     _loss_multiple_shoot_init(data, pred, ic_term)
 default loss function for `minibatch_MLE`.
@@ -39,15 +38,15 @@ Returns `minloss, p_trained, ranges, losses, θs`.
 - sensealg : sensitivity solver
 
 # optional
-- loss_fn : loss function with arguments `loss_fn(data, pred, ic_term)`
-- λ : dictionary with learning rates. `Dict("ADAM" => 0.01, "BFGS" => 0.01)`
-- maxiters : dictionary with maximum iterations. Dict("ADAM" => 2000, "BFGS" => 1000),
-- continuity_term : weight on continuity conditions
-- ic_term : weight on initial conditions
-- verbose : displaying loss
-- plotting : plotting convergence loss
-- p_true_dict : nothing
-- threshold = 1e-6
+- `loss_fn` : loss function with arguments `loss_fn(data, pred, ic_term)`
+- `λ` : dictionary with learning rates. `Dict("ADAM" => 0.01, "BFGS" => 0.01)`
+- `maxiters` : dictionary with maximum iterations. Dict("ADAM" => 2000, "BFGS" => 1000),
+- `continuity_term` : weight on continuity conditions
+- `ic_term` : weight on initial conditions
+- `verbose` : displaying loss
+- `plotting` : plotting convergence loss
+- `p_true_dict` : Dictionary with entries`Dict("p_true" => [val1, val2], "labs" => ["p1","p2",...] )`
+- `threshold` : default to 1e-6
 """
 function minibatch_MLE(;p_init, 
                         group_size, 
@@ -140,7 +139,6 @@ function minibatch_MLE(;p_init,
 
 
     println("***************\nTraining started\n***************")
-
     println("`ADAM` with λ = $(λ["ADAM"])")
     res3 = DiffEqFlux.sciml_train(_loss, 
                                 p_init, 
@@ -155,13 +153,12 @@ function minibatch_MLE(;p_init,
                                 cb= callback, 
                                 maxiters = maxiters["BFGS"])
 
-
+    minloss, pred = _loss(res.minimizer)
     p_trained = res.minimizer[dim_prob * nb_group + 1 : end]
-    minloss = res.minimum
-    println("Final training loss after $(length(losses)) iterations $(losses[end])")
+    println("Final training loss after $(length(losses)) iterations $minloss")
     println("Parameters p = ", p_trained)
     isnothing(p_true_dict) ? nothing : println("True parameters = ", p_true )
-    return minloss, p_trained, ranges, losses, θs
+    return ResultMLE(minloss, p_trained, pred, ranges, losses, θs)
 end
 
 """
@@ -169,6 +166,7 @@ end
                     group_sizes,
                     learning_rates,
                     kwargs...)
+Performs a recursive minibatch MLE, iterating over `group_sizes`. For kwargs, see `minibatch_MLE`.
 
 # arguments
 - `group_sizes` : array of group sizes to test
@@ -179,19 +177,15 @@ function recursive_minibatch_MLE(;group_sizes,
                                 kwargs...)
 
     @assert length(group_sizes) == length(learning_rates)
-    minloss = Inf
-    p_trained = kwargs[:p_init]
-    ranges = []
-    losses = eltype(p_trained)[]
-    θs = eltype(p_trained)[]
+    res = ResultMLE(Inf, [], [], [], [], [])
     for (i,gs) in enumerate(group_sizes)
         println("***************\nRecursive training with group size $gs\n***************")
-        temp = minibatch_MLE(;group_size = group_sizes[i], λ = learning_rates[i], kwargs...)
-        if temp[1] < minloss
-            minloss, p_trained, ranges, losses, θs = temp
+        tempres = minibatch_MLE(;group_size = group_sizes[i], λ = learning_rates[i], kwargs...)
+        if tempres.minloss < res.minloss
+            res = tempres
         else
             break
         end
     end
-    return minloss, p_trained, ranges, losses, θs
+    return res
 end
