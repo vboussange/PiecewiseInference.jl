@@ -4,6 +4,7 @@ using Revise
 
 @testset "EcologyInformedML" begin
     # include("FIM.jl")
+    # include("plot_convergence.jl")
     include("minibatch_loss.jl")
     include("minibatch_MLE.jl")
 end

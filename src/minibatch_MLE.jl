@@ -23,7 +23,9 @@ end
                 ic_term = 1.,
                 verbose = true,
                 plotting = false,
-                p_true_dict = nothing,)
+                p_true = nothing,
+                p_labs = nothing,
+                threshold = 1e-6)
 
 Maximum likelihood estimation with minibatching. Loops through ADAM and BFGS.
 Returns `minloss, p_trained, ranges, losses, θs`.
@@ -45,7 +47,8 @@ Returns `minloss, p_trained, ranges, losses, θs`.
 - `ic_term` : weight on initial conditions
 - `verbose` : displaying loss
 - `plotting` : plotting convergence loss
-- `p_true_dict` : Dictionary with entries`Dict("p_true" => [val1, val2], "labs" => ["p1","p2",...] )`
+- `p_true` : true params
+- `p_labs` : labels of the true parameters
 - `threshold` : default to 1e-6
 """
 function minibatch_MLE(;p_init, 
@@ -62,7 +65,8 @@ function minibatch_MLE(;p_init,
                         ic_term = 1.,
                         verbose = true,
                         plotting = false,
-                        p_true_dict = nothing,
+                        p_true = nothing,
+                        p_labs = nothing,
                         threshold = 1e-6
                         )
     datasize = size(data_set,2)
@@ -114,11 +118,19 @@ function minibatch_MLE(;p_init,
     callback(θ, l, pred) = begin
         push!(losses, l)
         p_trained = @view θ[nb_group * dim_prob + 1: end]
-        isnothing(p_true_dict) ? nothing : push!(θs, sum((p_trained .- p_true_dict["p_true"]).^2))
+        isnothing(p_true) ? nothing : push!(θs, sum((p_trained .- p_true).^2))
         if length(losses)%50==0
             verbose ? println("Current loss after $(length(losses)) iterations: $(losses[end])") : nothing
             if plotting
-                plot_convergence(losses, pred, data_set, ranges, tsteps, p_true_dict = p_true_dict, θs = θs, p_trained = p_trained)
+                plot_convergence(losses, 
+                                pred, 
+                                data_set, 
+                                ranges, 
+                                tsteps, 
+                                p_true = p_true, 
+                                p_labs = p_labs, 
+                                θs = θs, 
+                                p_trained = p_trained)
             end
         end
         if l < threshold
@@ -155,31 +167,28 @@ function minibatch_MLE(;p_init,
 
     minloss, pred = _loss(res.minimizer)
     p_trained = res.minimizer[dim_prob * nb_group + 1 : end]
-    println("Final training loss after $(length(losses)) iterations $minloss")
-    println("Parameters p = ", p_trained)
-    isnothing(p_true_dict) ? nothing : println("True parameters = ", p_true )
-    return ResultMLE(minloss, p_trained, pred, ranges, losses, θs)
+    return ResultMLE(minloss, p_trained, p_true, p_labs, pred, ranges, losses, θs)
 end
 
 """
-    recursive_minibatch_MLE(; 
+    iterative_minibatch_MLE(; 
                     group_sizes,
                     learning_rates,
                     kwargs...)
-Performs a recursive minibatch MLE, iterating over `group_sizes`. For kwargs, see `minibatch_MLE`.
+Performs a iterative minibatch MLE, iterating over `group_sizes`. For kwargs, see `minibatch_MLE`.
 
 # arguments
 - `group_sizes` : array of group sizes to test
 - `learning_rates`: array of dictionary with learning rates for ADAM and BFGS
 """
-function recursive_minibatch_MLE(;group_sizes,
+function iterative_minibatch_MLE(;group_sizes,
                                 learning_rates,
                                 kwargs...)
 
     @assert length(group_sizes) == length(learning_rates)
-    res = ResultMLE(Inf, [], [], [], [], [])
+    res = ResultMLE()
     for (i,gs) in enumerate(group_sizes)
-        println("***************\nRecursive training with group size $gs\n***************")
+        println("***************\nIterative training with group size $gs\n***************")
         tempres = minibatch_MLE(;group_size = group_sizes[i], λ = learning_rates[i], kwargs...)
         if tempres.minloss < res.minloss
             res = tempres

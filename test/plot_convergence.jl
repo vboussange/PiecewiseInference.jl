@@ -13,8 +13,8 @@ data_set_ens = randn(dim_prob,datasize, 2) .+ [0.1, 0.2, 0.3]
 
 ranges = [1:251, 251:datasize]
 tsteps = 1:datasize
-
-p_true_dict = Dict("lab" => [L"p_1", L"p_2"], "p_true" => [0.1, 0.2])
+p_labs = [L"p_1", L"p_2"]
+p_true = [0.1, 0.2]
 θs = exp.(-(1:niters)/10) .+ 1.
 p_trained = [0.05, 0.25]
 
@@ -30,7 +30,8 @@ end
                             data_set, 
                             ranges, 
                             tsteps; 
-                            p_true_dict = p_true_dict, 
+                            p_true = p_true, 
+                            p_labs = p_labs,
                             θs = θs, 
                             p_trained = p_trained)
     @test isa(fig1, Figure)
@@ -42,7 +43,8 @@ end
                             data_set_ens, 
                             ranges, 
                             tsteps; 
-                            p_true_dict = p_true_dict, 
+                            p_true = p_true, 
+                            p_labs = p_labs,
                             θs = θs, 
                             p_trained = p_trained)
     @test isa(fig1, Figure)

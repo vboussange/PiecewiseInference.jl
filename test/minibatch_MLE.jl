@@ -43,7 +43,7 @@ end
     @test all( isapprox.(res.p_trained, p_true, rtol = 1e-1))
 end
 
-@testset "Recursive minibatch MLE" begin
+@testset "Iterative minibatch MLE" begin
     ode_data_wnoise = ode_data .+ randn(size(ode_data)) .* 0.1
     group_size_init = 51
 
@@ -53,7 +53,7 @@ end
     group_sizes = vcat(group_size_init, div_data[div_data .> group_size_init] .+ 1)
     learning_rates = [Dict("ADAM" => 1e-2, "BFGS" => 1e-3) for i in 1:length(group_sizes)]
 
-    res = recursive_minibatch_MLE(group_sizes = group_sizes, 
+    res = iterative_minibatch_MLE(group_sizes = group_sizes, 
                                                 learning_rates = learning_rates,
                                                 p_init = p_init,  
                                                 data_set = ode_data_wnoise, 

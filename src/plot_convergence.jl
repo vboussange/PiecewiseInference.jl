@@ -8,7 +8,8 @@ fontdict = Dict("size" => 16)
                     pred, 
                     ranges, 
                     tsteps;
-                    p_true_dict = nothing, 
+                    p_true = nothing, 
+                    p_labs = nothing,
                     θs = []
                     )
                
@@ -23,7 +24,8 @@ function plot_convergence(losses,
                             data_set,
                             ranges, 
                             tsteps;
-                            p_true_dict, 
+                            p_true = nothing, 
+                            p_labs = nothing,
                             θs,
                             p_trained
                             )
@@ -80,13 +82,12 @@ function plot_convergence(losses,
 
 
     # plotting error inferred params
-    if !isnothing(p_true_dict) 
-        @unpack p_true, lab = p_true_dict
+    if !isnothing(p_true) 
         rel_err_p = (p_trained .- p_true) ./ p_true
         ax = axs[end]
         ax.scatter(rel_err_p, 1:length(p_true))
-        ax.set_yticks(1:length(lab))
-        ax.set_yticklabels(lab)
+        ax.set_yticks(1:length(p_labs))
+        !isnothing(p_labs) ? ax.set_yticklabels(p_labs) : nothing
         ax.set_xlabel("Relative error",fontdict=fontdict)
         ax.set_xlim(-0.6,0.6)
         ax.vlines(0., ymin = 0, ymax = length(lab) + 1, label = "True value", linestyle = "--", color="tab:grey")

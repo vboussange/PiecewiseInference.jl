@@ -18,15 +18,25 @@ module EcologyInformedML
 
     """ 
         ResultMLE(minloss, p_trained, pred, ranges, losses,θs)
-    Container for ouputs of MLE
+        ResultMLE()
+    Container for ouputs of MLE.
+    
+    # Notes
+    `res = ResultMLE()` has all fields empty but `res.minloss` which is set to `Inf`.
+
     """
-    struct ResultMLE{M,P,Pr,R,L,T}
+    struct ResultMLE{M,P,Pp,Pl,Pr,R,L,T}
         minloss::M
         p_trained::P
+        p_true::Pp
+        p_labs::Pl
         pred::Pr
         ranges::R
         losses::L
         θs::T
+    end
+    function ResultMLE()
+        ResultMLE(Inf, [], [], [], [], [], [], [])
     end
 
     include("utils.jl")
@@ -38,6 +48,6 @@ module EcologyInformedML
     export ParamFun, ResultMLE
     export AIC, AICc, AICc_TREE, moments!, moments, FIM_strouwen, FIM_yazdani, divisors
     export minibatch_loss
-    export minibatch_MLE, recursive_minibatch_MLE
+    export minibatch_MLE, iterative_minibatch_MLE
     export plot_convergence
 end # module
