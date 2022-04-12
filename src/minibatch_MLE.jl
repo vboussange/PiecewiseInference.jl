@@ -47,6 +47,8 @@ Returns `minloss, p_trained, ranges, losses, θs`.
 - `ic_term` : weight on initial conditions
 - `verbose` : displaying loss
 - `plotting` : plotting convergence loss
+- `saving_plots` = false : saves plotting figure in dir `saving_dir`
+- `saving_dir` = "plot_convergence" : directory and name without extension of the plotting file
 - `p_true` : true params
 - `p_labs` : labels of the true parameters
 - `threshold` : default to 1e-6
@@ -65,9 +67,12 @@ function minibatch_MLE(;p_init,
                         ic_term = 1.,
                         verbose = true,
                         plotting = false,
+                        saving_plots = false,
+                        saving_dir = "plot_convergence",
+                        info_per_its=50,
                         p_true = nothing,
                         p_labs = nothing,
-                        threshold = 1e-6
+                        threshold = 1e-6,
                         )
     datasize = size(data_set,2)
     dim_prob = length(prob.u0) #used by loss_nm
@@ -119,18 +124,19 @@ function minibatch_MLE(;p_init,
         push!(losses, l)
         p_trained = @view θ[nb_group * dim_prob + 1: end]
         isnothing(p_true) ? nothing : push!(θs, sum((p_trained .- p_true).^2))
-        if length(losses)%50==0
+        if length(losses)%info_per_its==0
             verbose ? println("Current loss after $(length(losses)) iterations: $(losses[end])") : nothing
             if plotting
-                plot_convergence(losses, 
-                                pred, 
-                                data_set, 
-                                ranges, 
-                                tsteps, 
-                                p_true = p_true, 
-                                p_labs = p_labs, 
-                                θs = θs, 
-                                p_trained = p_trained)
+                fig = plot_convergence(losses, 
+                                        pred, 
+                                        data_set, 
+                                        ranges, 
+                                        tsteps, 
+                                        p_true = p_true, 
+                                        p_labs = p_labs, 
+                                        θs = θs, 
+                                        p_trained = p_trained)
+                saving_plots ? fig.savefig(saving_dir*"-$(length(losses)÷info_per_its).png", dpi = 500) : nothing
             end
         end
         if l < threshold

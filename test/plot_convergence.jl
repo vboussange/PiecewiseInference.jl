@@ -1,4 +1,4 @@
-
+cd(@__DIR__)
 
 niters = 1000
 datasize = 500
@@ -48,4 +48,42 @@ end
                             θs = θs, 
                             p_trained = p_trained)
     @test isa(fig1, Figure)
+end
+
+@testset "minibatch MLE" begin
+
+    function dudt(du, u, p, t)
+        du .=  0.1 .* u .* ( 1. .- p .* u) 
+    end
+    
+    tsteps = 1.:0.5:100.5
+    tspan = (tsteps[1], tsteps[end])
+    
+    p_true = [0.23, 0.5]
+    p_init= [1., 2.]
+    
+    u0 = ones(2)
+    prob = ODEProblem(dudt, u0, tspan, p_true)
+    sol_data = solve(prob, Tsit5(), tspan = tspan, saveat = tsteps, sensealg = ForwardDiffSensitivity())
+    ode_data = Array(sol_data)
+    maxiters = Dict("ADAM" => 2000, "BFGS" => 100)
+
+    isdir("figures") ? nothing : mkdir("figures") 
+    res = minibatch_MLE(p_init = p_init, 
+                        group_size = 101, 
+                        data_set = ode_data, 
+                        prob = prob, 
+                        tsteps = tsteps, 
+                        alg = Tsit5(), 
+                        sensealg =  ForwardDiffSensitivity(),
+                        maxiters = maxiters, 
+                        λ = Dict("ADAM" => 0.01, "BFGS" => 0.001),
+                        p_true = p_true,
+                        plotting = true,
+                        saving_plots = true,
+                        saving_dir = "figures/plotting_convergence",
+                        info_per_its=100,
+                        )
+    @test isa(res, ResultMLE)
+    isdir("figures") ? rm("figures", recursive=true) : nothing
 end

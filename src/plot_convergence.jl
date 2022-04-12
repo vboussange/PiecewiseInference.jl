@@ -2,6 +2,8 @@
 # trajectory for ensmeble problems, for minibatch_loss simplu put 0
 lss = ["-","-."] 
 fontdict = Dict("size" => 16)
+_cmap = PyPlot.cm.get_cmap("tab20", 20)
+COLOR_PALETTE = [_cmap(i) for i in 1:20]
 """
     plot_convergence(p_trained, 
                     losses, 
@@ -26,19 +28,20 @@ function plot_convergence(losses,
                             tsteps;
                             p_true = nothing, 
                             p_labs = nothing,
-                            θs,
-                            p_trained
+                            θs = [],
+                            p_trained = [],
+                            color_palette = COLOR_PALETTE
                             )
 
-    close("all")
+    PyPlot.close("all")
     dim_prob = size(data_set,1)
-    nplots = min(2, size(pred,3)) + 1 + !isempty(p_trained)
+    nplots = min(2, size(pred,3)) + 1 + !isnothing(p_true) 
     if nplots == 2 # for EnsembleProblems
-        fig, axs = subplots(1, 2, figsize = (10, 5)) # only loss and time series
+        fig, axs = PyPlot.subplots(1, 2, figsize = (10, 5)) # only loss and time series
     elseif nplots == 3
-        fig, axs = subplots(1,3, figsize = (15, 5)) # loss, params convergence and time series
+        fig, axs = PyPlot.subplots(1,3, figsize = (15, 5)) # loss, params convergence and time series
     else
-        fig, axs = subplots(2,2, figsize = (10, 10)) # loss, params convergence and 2 time series (ensemble problems)
+        fig, axs = PyPlot.subplots(2,2, figsize = (10, 10)) # loss, params convergence and 2 time series (ensemble problems)
     end
 
     # plotting loss
@@ -60,7 +63,7 @@ function plot_convergence(losses,
         for g in 1:length(ranges)
             _pred = pred[g]
             _tsteps = tsteps[ranges[g]]
-            for i in 1:dim_prob
+            for i in 1:min(dim_prob,length(COLOR_PALETTE))
                 for k in 1:min(2, size(pred,3)) # for EnsembleProblems
                     axs[k+1].plot(_tsteps, _pred[i,:, k], color = color_palette[i], ls = lss[1], label = (i == 1) && (g == 1) ? "Recovered dynamics" : nothing,)
                     axs[k+1].plot(_tsteps, data_set[i,ranges[g],k], color = color_palette[i], ls = lss[2], label =  (i == 1) && (g == 1) ? "Data" : nothing)
@@ -75,8 +78,8 @@ function plot_convergence(losses,
             end
         end
     end
-    for ax in axs[2:end]
-        ax.set_xlabel("t",fontdict=fontdict); ax.set_ylabel(L"x_\theta(t)",fontdict=fontdict)
+    for k in 1:min(2, size(pred,3))
+        axs[k+1].set_xlabel("t",fontdict=fontdict); ax.set_ylabel(L"x_\theta(t)",fontdict=fontdict)
     end
     axs[2].legend(fontsize=12)
 
@@ -86,11 +89,11 @@ function plot_convergence(losses,
         rel_err_p = (p_trained .- p_true) ./ p_true
         ax = axs[end]
         ax.scatter(rel_err_p, 1:length(p_true))
-        ax.set_yticks(1:length(p_labs))
+        ax.set_yticks(1:length(p_true))
         !isnothing(p_labs) ? ax.set_yticklabels(p_labs) : nothing
         ax.set_xlabel("Relative error",fontdict=fontdict)
         ax.set_xlim(-0.6,0.6)
-        ax.vlines(0., ymin = 0, ymax = length(lab) + 1, label = "True value", linestyle = "--", color="tab:grey")
+        ax.vlines(0., ymin = 0, ymax = length(p_true) + 1, label = "True value", linestyle = "--", color="tab:grey")
         ax.legend(fontsize=12)
     end
 
