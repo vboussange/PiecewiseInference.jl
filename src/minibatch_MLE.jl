@@ -40,6 +40,7 @@ Returns `minloss, p_trained, ranges, losses, θs`.
 - sensealg : sensitivity solver
 
 # optional
+- u0_init : if not provided, we initialise from `data_set`
 - `loss_fn` : loss function with arguments `loss_fn(data, pred, ic_term)`
 - `λ` : dictionary with learning rates. `Dict("ADAM" => 0.01, "BFGS" => 0.01)`
 - `maxiters` : dictionary with maximum iterations. Dict("ADAM" => 2000, "BFGS" => 1000),
@@ -53,8 +54,15 @@ Returns `minloss, p_trained, ranges, losses, θs`.
 - `p_labs` : labels of the true parameters
 - `threshold` : default to 1e-6
 """
-function minibatch_MLE(;p_init, 
-                        group_size, 
+function minibatch_MLE(;group_size,  kwargs...)
+    datasize = size(kwargs[:data_set],2)
+    println("hey")
+    _minibatch_MLE(;ranges=_get_ranges(group_size, datasize),  kwargs...)
+end
+
+function _minibatch_MLE(;p_init, 
+                        u0s_init = nothing,
+                        ranges, 
                         data_set, 
                         prob, 
                         tsteps, 
@@ -72,12 +80,9 @@ function minibatch_MLE(;p_init,
                         info_per_its=50,
                         p_true = nothing,
                         p_labs = nothing,
-                        threshold = 1e-6,
+                        threshold = 1e-16,
                         )
-    datasize = size(data_set,2)
     dim_prob = length(prob.u0) #used by loss_nm
-
-    @assert mod(datasize,(group_size-1)) == 0. "`group_size` is not compatible with `datasize`\n`group_size` must be a divisor of `size(data_set,2)`"
 
     # minibatch loss
     function loss_mb(θ)
@@ -104,19 +109,19 @@ function minibatch_MLE(;p_init,
         return l, pred
     end
 
-    if group_size-1 < datasize
-        ranges = DiffEqFlux.group_ranges(datasize, group_size)
+    if length(ranges) > 1
         # minibatching
         _loss = loss_mb
     else
-        ranges = [1:datasize]
         # normal MLE with initial estimation
         _loss = loss_nm
     end
-    u0s_init = data_set[:,first.(ranges),:][:]
+
+    # initialising with data_set if not provided
+    isnothing(u0s_init) ? u0s_init = reshape(data_set[:,first.(ranges),:],:) : nothing
     # making sure that u0s_init are positive, otherwise we might have some numerical difficulties
     u0s_init[u0s_init .< 0.] .= 1e-3
-    p_init = [u0s_init;p_init]
+    θ = [u0s_init;p_init]
     nb_group = length(ranges)
     println("minibatch_MLE with $(length(tsteps)) points and $nb_group groups.")
 
@@ -159,7 +164,7 @@ function minibatch_MLE(;p_init,
     println("***************\nTraining started\n***************")
     println("`ADAM` with λ = $(λ["ADAM"])")
     res3 = DiffEqFlux.sciml_train(_loss, 
-                                p_init, 
+                                θ, 
                                 ADAM(λ["ADAM"]), 
                                 cb=callback, 
                                 maxiters = maxiters["ADAM"])
@@ -175,6 +180,18 @@ function minibatch_MLE(;p_init,
     p_trained = res.minimizer[dim_prob * nb_group + 1 : end]
     return ResultMLE(minloss, p_trained, p_true, p_labs, pred, ranges, losses, θs)
 end
+
+function _get_ranges(group_size, datasize)
+    if group_size-1 < datasize
+        ranges = DiffEqFlux.group_ranges(datasize, group_size)
+        # minibatching
+    else
+        ranges = [1:datasize]
+        # normal MLE with initial estimation
+    end
+    return ranges
+end
+
 
 """
     iterative_minibatch_MLE(; 
@@ -192,15 +209,47 @@ function iterative_minibatch_MLE(;group_sizes,
                                 kwargs...)
 
     @assert length(group_sizes) == length(learning_rates)
-    res = ResultMLE()
+
+    # initialising results
+    data_set = kwargs[:data_set]
+    datasize = size(data_set,2)
+    res = ResultMLE(Inf, [], [], [], [data_set], [1:datasize], [], [])
     for (i,gs) in enumerate(group_sizes)
         println("***************\nIterative training with group size $gs\n***************")
-        tempres = minibatch_MLE(;group_size = group_sizes[i], λ = learning_rates[i], kwargs...)
-        if tempres.minloss < res.minloss
+        ranges = _get_ranges(group_sizes[i], datasize)
+        u0s_init = _initialise_u0s_iterative_minibatch_ML(res.pred,res.ranges,ranges)
+        tempres = _minibatch_MLE(;ranges = ranges, 
+                                λ = learning_rates[i],
+                                u0s_init = reshape(u0s_init,:),
+                                kwargs...)
+        if tempres.minloss < res.minloss || tempres.minloss < kwargs[:threshold] # if threshold is met, we can go one level above
             res = tempres
         else
             break
         end
     end
     return res
+end
+
+function _initialise_u0s_iterative_minibatch_ML(pred, ranges_pred, ranges_2)
+    dim_prob = size(first(pred),1)
+    u0_2 = zeros(eltype(first(pred)), dim_prob, length(ranges_2))
+    for (i, rng2) in enumerate(ranges_2)
+        _r = first(rng2) # index of new initial condtions on the time steps
+        for j in 0:length(ranges_pred)-1
+            #=
+            NOTE : here we traverse ranges_pred in descending order, to handle overlaps in ranges.
+            Indeed, suppose we go in asending order.
+            if _r == last(rng), it also means that _r == first(next rng),
+            and in this case pred(first(next rng)) estimate is more accurate (all pred in the range depend on its value).
+            =#
+            rng = ranges_pred[end-j]
+            if _r in rng
+                ui_pred = reshape(pred[end-j][:, _r .== rng],:)
+                u0_2[:,i] .= ui_pred
+                break
+            end
+        end
+    end
+    return u0_2
 end
