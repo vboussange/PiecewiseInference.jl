@@ -108,7 +108,7 @@ function _minibatch_MLE(;p_init,
         sol.retcode == :Success ? nothing : return Inf, []
         pred = sol |> Array
         l = loss_fn(data_set, pred, ic_term)
-        return l, pred
+        return l, [pred]
     end
 
     if length(ranges) > 1

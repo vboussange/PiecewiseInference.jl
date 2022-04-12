@@ -14,9 +14,9 @@ function AIC(RSS, k, m)
 end
 
 """
-    AICc(RSS, k, m)
+    AICc(aic, k, m)
 
-Calculate AIC corrected of a model given its `RSS`, 
+Calculate AIC corrected of a model given its `aic`, 
 `k` its number of parameters, 
 and `m` the number of observations 
 (if d variables and T time steps, m = d * T). 
