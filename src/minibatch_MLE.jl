@@ -1,3 +1,5 @@
+# for more intuition on kwargs : https://discourse.julialang.org/t/passing-kwargs-can-overwrite-other-keyword-arguments/74933
+
 """
     _loss_multiple_shoot_init(data, pred, ic_term)
 default loss function for `minibatch_MLE`.
