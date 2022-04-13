@@ -43,7 +43,7 @@ module EcologyInformedML
     include("minibatch_loss.jl")
     include("minibatch_MLE.jl")
 
-    plot_convergence(args...) = println("Plotting requires loading package `PyPlot`")
+    plot_convergence(args...;kwargs...) = println("Plotting requires loading package `PyPlot`")
     function __init__()
         @require PyPlot="d330b81b-6aea-500a-939a-2ce795aea3ee" include("plot_convergence.jl")
     end

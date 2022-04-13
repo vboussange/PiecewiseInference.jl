@@ -19,12 +19,15 @@ end
                 alg, 
                 sensealg,
                 loss_fn = _loss_multiple_shoot_init(data, pred, ic_term),
-                λ = Dict("ADAM" => 0.01, "BFGS" => 0.01),
-                maxiters = Dict("ADAM" => 2000, "BFGS" => 1000),
+                optimizers = [ADAM(0.01), BFGS(initial_stepnorm=0.01)],
+                maxiters = [1000, 200],
                 continuity_term = 1.,
                 ic_term = 1.,
                 verbose = true,
                 plotting = false,
+                saving_plots = false,
+                saving_dir = "plot_convergence",
+                info_per_its=50,
                 p_true = nothing,
                 p_labs = nothing,
                 threshold = 1e-6)
@@ -49,30 +52,31 @@ Returns `minloss, p_trained, ranges, losses, θs`.
 - `continuity_term` : weight on continuity conditions
 - `ic_term` : weight on initial conditions
 - `verbose` : displaying loss
+- `info_per_its` = 50,
 - `plotting` : plotting convergence loss
 - `saving_plots` = false : saves plotting figure in dir `saving_dir`
 - `saving_dir` = "plot_convergence" : directory and name without extension of the plotting file
+- `info_per_its` = 50,
 - `p_true` : true params
 - `p_labs` : labels of the true parameters
 - `threshold` : default to 1e-6
 """
 function minibatch_MLE(;group_size,  kwargs...)
     datasize = size(kwargs[:data_set],2)
-    println("hey")
     _minibatch_MLE(;ranges=_get_ranges(group_size, datasize),  kwargs...)
 end
 
 function _minibatch_MLE(;p_init, 
-                        u0s_init = nothing,
-                        ranges, 
+                        u0s_init = nothing, # provided by iterative_minibatch_MLE
+                        ranges, # provided by minibatch_MLE
                         data_set, 
                         prob, 
                         tsteps, 
                         alg, 
                         sensealg,
                         loss_fn = _loss_multiple_shoot_init,
-                        λ = Dict("ADAM" => 0.01, "BFGS" => 0.01),
-                        maxiters = Dict("ADAM" => 2000, "BFGS" => 1000),
+                        optimizers = [ADAM(0.01), BFGS(initial_stepnorm=0.01)],
+                        maxiters = [1000, 200],
                         continuity_term = 1.,
                         ic_term = 1.,
                         verbose = true,
@@ -85,6 +89,7 @@ function _minibatch_MLE(;p_init,
                         threshold = 1e-16,
                         )
     dim_prob = length(prob.u0) #used by loss_nm
+    @assert length(optimizers) == length(maxiters)
 
     # minibatch loss
     function loss_mb(θ)
@@ -164,20 +169,13 @@ function _minibatch_MLE(;p_init,
 
 
     println("***************\nTraining started\n***************")
-    println("`ADAM` with λ = $(λ["ADAM"])")
-    res3 = DiffEqFlux.sciml_train(_loss, 
-                                θ, 
-                                ADAM(λ["ADAM"]), 
-                                cb=callback, 
-                                maxiters = maxiters["ADAM"])
-
-    println("`BFGS` with λ = $(λ["BFGS"])")
-    res = DiffEqFlux.sciml_train(_loss, 
-                                res3.minimizer, 
-                                BFGS(initial_stepnorm = λ["BFGS"]), 
-                                cb= callback, 
-                                maxiters = maxiters["BFGS"])
-
+    opt = first(optimizers)
+    println("Running optimizer $(typeof(opt))")
+    res =  DiffEqFlux.sciml_train(_loss, θ, opt, cb=callback, maxiters = first(maxiters))
+    for(i, opt) in enumerate(optimizers[2:end])
+        println("Running optimizer $(typeof(opt))")
+        res =  DiffEqFlux.sciml_train(_loss, res.minimizer, opt, cb=callback, maxiters = maxiters[i+1])
+    end
     minloss, pred = _loss(res.minimizer)
     p_trained = res.minimizer[dim_prob * nb_group + 1 : end]
     return ResultMLE(minloss, p_trained, p_true, p_labs, pred, ranges, losses, θs)
@@ -198,39 +196,47 @@ end
 """
     iterative_minibatch_MLE(; 
                     group_sizes,
-                    learning_rates,
+                    optimizers_array,
                     kwargs...)
-Performs a iterative minibatch MLE, iterating over `group_sizes`. For kwargs, see `minibatch_MLE`.
+Performs a iterative minibatch MLE, iterating over `group_sizes`. 
+Stops the iteration when loss function increases between two iterations.
+
+Returns an array with all `ResultMLE` obtained during the iteration.
+For kwargs, see `minibatch_MLE`.
 
 # arguments
 - `group_sizes` : array of group sizes to test
-- `learning_rates`: array of dictionary with learning rates for ADAM and BFGS
+- `optimizers_array`: optimizers_array[i] is an array of optimizers for the trainging processe of `group_sizes[i`
 """
 function iterative_minibatch_MLE(;group_sizes,
-                                learning_rates,
+                                optimizers_array,
+                                threshold = 1e-16,
                                 kwargs...)
 
-    @assert length(group_sizes) == length(learning_rates)
+    @assert length(group_sizes) == length(optimizers_array)
 
     # initialising results
     data_set = kwargs[:data_set]
     datasize = size(data_set,2)
     res = ResultMLE(Inf, [], [], [], [data_set], [1:datasize], [], [])
+    res_array = ResultMLE[]
     for (i,gs) in enumerate(group_sizes)
         println("***************\nIterative training with group size $gs\n***************")
         ranges = _get_ranges(group_sizes[i], datasize)
         u0s_init = _initialise_u0s_iterative_minibatch_ML(res.pred,res.ranges,ranges)
         tempres = _minibatch_MLE(;ranges = ranges, 
-                                λ = learning_rates[i],
+                                optimizers = optimizers_array[i],
                                 u0s_init = reshape(u0s_init,:),
+                                threshold = threshold,
                                 kwargs...)
-        if tempres.minloss < res.minloss || tempres.minloss < kwargs[:threshold] # if threshold is met, we can go one level above
+        if tempres.minloss < res.minloss || tempres.minloss < threshold # if threshold is met, we can go one level above
+            push!(res_array, tempres)
             res = tempres
         else
             break
         end
     end
-    return res
+    return res_array
 end
 
 function _initialise_u0s_iterative_minibatch_ML(pred, ranges_pred, ranges_2)
