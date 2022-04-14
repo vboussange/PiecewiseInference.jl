@@ -66,6 +66,37 @@ function minibatch_MLE(;group_size,  kwargs...)
     _minibatch_MLE(;ranges=_get_ranges(group_size, datasize),  kwargs...)
 end
 
+# TODO: here we implement the scenario where we have independent time series
+# 
+function minibatch_MLE(;group_size,
+                        dataset::Vector, #many different initial conditions
+                        tsteps::Vector, #corresponding time steps
+                        kwargs...)
+    # TODO: this part must be tested
+    @assert length(tsteps) == length(dataset) "Independent time series must be gathered as a Vector"
+    datasize_arr = size.(dataset,2)
+    ranges_arr = [_get_ranges(group_size, datasize_arr[i]) for i in 1:length(dataset)]
+    # updating to take into account the shift provoked by concatenating independent TS
+    ranges_shift = cumsum(datasize_arr) # shift
+    for i in 2:length(ranges_arr)
+        ranges_arr[i] = ranges_shift[i-1] + ranges_arr[i] #adding shift to the start of the range
+    end
+    dataset_cat = cat(dataset,dims=2)
+    ranges_cat = vcat(ranges_arr...) # this is the critical step: you need to have a cumsum of tsteps
+    tsteps_cat = vcat(tsteps...)
+
+    res = _minibatch_MLE(;ranges_cat, dataset=dataset_cat, tsteps=tsteps_cat, kwargs...)
+    # group back the time series in vector, to have
+    # pred = [ [mibibatch_1_ts_1, mibibatch_2_ts_1...],  [mibibatch_1_ts_2, mibibatch_2_ts_2...] ...]
+    pred_arr = similar(dataset)
+    for (i,ranges) in enumerate(ranges_arr)
+        pred_arr[i] = [res.pred[:,rng] for rng in ranges]
+    end
+    # reconstructing the problem with original format
+    res_arr = remake(res, tsteps=tsteps, pred = pred_arr, ranges=ranges_arr)
+    return res_arr
+end
+
 function _minibatch_MLE(;p_init, 
                         u0s_init = nothing, # provided by iterative_minibatch_MLE
                         ranges, # provided by minibatch_MLE
