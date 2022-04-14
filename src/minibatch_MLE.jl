@@ -171,7 +171,7 @@ function _minibatch_MLE(;p_init,
     println("***************\nTraining started\n***************")
     opt = first(optimizers)
     println("Running optimizer $(typeof(opt))")
-    res =  DiffEqFlux.sciml_train(_loss, θ, opt, cb=callback, maxiters = first(maxiters))
+    res = DiffEqFlux.sciml_train(_loss, θ, opt, cb=callback, maxiters = first(maxiters))
     for(i, opt) in enumerate(optimizers[2:end])
         println("Running optimizer $(typeof(opt))")
         res =  DiffEqFlux.sciml_train(_loss, res.minimizer, opt, cb=callback, maxiters = maxiters[i+1])
