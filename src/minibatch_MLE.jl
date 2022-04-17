@@ -96,8 +96,9 @@ function minibatch_ML_indep_TS(;group_size::Int,
     res = _minibatch_MLE(;ranges=ranges_cat,
         data_set=data_set_cat, 
         tsteps=tsteps_cat, 
-        continuity_term = 0., # this is essential
-        kwargs...)
+        kwargs...,
+        continuity_term = 0.,)  # this overrides kwargs, essential as it does not make sense to have continuity across indepdenent TS
+        # NOTE: we could have continuity within a time series, this must be carefully thought out.
     # group back the time series in vector, to have
     # pred = [ [mibibatch_1_ts_1, mibibatch_2_ts_1...],  [mibibatch_1_ts_2, mibibatch_2_ts_2...] ...]
     pred_arr = [Array{eltype(data_set[1])}[] for _ in 1:length(data_set)]
@@ -150,7 +151,7 @@ function _minibatch_MLE(;p_init,
     # normal loss
     function loss_nm(θ)
         params = @view θ[dim_prob + 1: end] # params of the problem
-        u0_i = @view θ[1:dim_prob]
+        u0_i = abs.(θ[1:dim_prob])
         prob_i = remake(prob; p=params, tspan=(tsteps[1], tsteps[end]), u0=u0_i)
         sol = solve(prob_i, alg, saveat = tsteps, sensealg = sensealg, kwargshandle=KeywordArgError)
         sol.retcode == :Success ? nothing : return Inf, []
@@ -170,7 +171,7 @@ function _minibatch_MLE(;p_init,
     # initialising with data_set if not provided
     isnothing(u0s_init) ? u0s_init = reshape(data_set[:,first.(ranges),:],:) : nothing
     # making sure that u0s_init are positive, otherwise we might have some numerical difficulties
-    u0s_init[u0s_init .< 0.] .= 1e-3
+    u0s_init[u0s_init .< 0.] .= 1e-3 # alternative formulation : `u0s_init = max.(u0s_init,1e-3)`
     θ = [u0s_init;p_init]
     nb_group = length(ranges)
     println("minibatch_MLE with $(length(tsteps)) points and $nb_group groups.")

@@ -46,7 +46,7 @@ function minibatch_loss(
     loss = zero(eltype(θ))
     group_predictions = Vector{Array{eltype(θ)}}(undef, length(ranges))
     for (i, rg) in enumerate(ranges)
-        u0_i = @view θ[dim_prob*(i-1)+1:dim_prob*i]
+        u0_i = abs.(θ[dim_prob*(i-1)+1:dim_prob*i]) # taking absolute value, assuming populations cannot be negative
         prob_i = remake(prob; p=params, tspan=(tsteps[first(rg)], tsteps[last(rg)]), u0=u0_i,)
         u = ode_data[:, rg]
         sol = solve(prob_i, solver; saveat=tsteps[rg], kwargshandle=KeywordArgError, kwargs...)
