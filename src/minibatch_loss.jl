@@ -49,7 +49,7 @@ function minibatch_loss(
         u0_i = @view θ[dim_prob*(i-1)+1:dim_prob*i]
         prob_i = remake(prob; p=params, tspan=(tsteps[first(rg)], tsteps[last(rg)]), u0=u0_i,)
         u = ode_data[:, rg]
-        sol = solve(prob_i, solver; saveat=tsteps[rg], kwargs...)
+        sol = solve(prob_i, solver; saveat=tsteps[rg], kwargshandle=KeywordArgError, kwargs...)
 
         # Abort and return infinite loss if one of the integrations failed
         sol.retcode == :Success ? nothing : return Inf, group_predictions

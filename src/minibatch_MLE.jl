@@ -144,7 +144,7 @@ function _minibatch_MLE(;p_init,
                             alg, 
                             ranges, 
                             continuity_term = continuity_term, 
-                            senselag = sensealg)
+                            sensealg = sensealg)
     end
 
     # normal loss
@@ -152,7 +152,7 @@ function _minibatch_MLE(;p_init,
         params = @view θ[dim_prob + 1: end] # params of the problem
         u0_i = @view θ[1:dim_prob]
         prob_i = remake(prob; p=params, tspan=(tsteps[1], tsteps[end]), u0=u0_i)
-        sol = solve(prob_i, alg; saveat=tsteps, senselag = sensealg)
+        sol = solve(prob_i, alg, saveat = tsteps, sensealg = sensealg, kwargshandle=KeywordArgError)
         sol.retcode == :Success ? nothing : return Inf, []
         pred = sol |> Array
         l = loss_fn(data_set, pred, ic_term)

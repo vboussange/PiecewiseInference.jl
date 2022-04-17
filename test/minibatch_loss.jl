@@ -12,7 +12,7 @@ p_init= [1., 2.]
 
 u0 = ones(2)
 prob = ODEProblem(dudt, u0, tspan, p_true)
-sol_data = solve(prob, Tsit5(), tspan = tspan, saveat = tsteps, sensealg = ForwardDiffSensitivity())
+sol_data = solve(prob, Tsit5(), saveat = tsteps, sensealg = ForwardDiffSensitivity(), kwargshandle=KeywordArgError)
 ode_data = Array(sol_data)
 
 loss_function(data, pred) = sum(abs2, data - pred)

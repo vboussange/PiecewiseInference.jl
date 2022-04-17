@@ -11,7 +11,7 @@ p_init= [1., 2.]
 
 u0 = ones(2)
 prob = ODEProblem(dudt, u0, tspan, p_true)
-sol_data = solve(prob, Tsit5(), tspan = tspan, saveat = tsteps, sensealg = ForwardDiffSensitivity())
+sol_data = solve(prob, Tsit5(), saveat = tsteps, sensealg = ForwardDiffSensitivity())
 ode_data = Array(sol_data)
 optimizers = [ADAM(0.001)]
 maxiters = [5000]
@@ -52,7 +52,7 @@ end
     ode_datas = []
     for (i,u0) in enumerate(u0s) # generating independent time series
         prob = ODEProblem(dudt, u0, tspan, p_true)
-        sol_data = solve(prob, Tsit5(), tspan = tspan, saveat = tsteps_arr[i], sensealg = ForwardDiffSensitivity())
+        sol_data = solve(prob, Tsit5(), saveat = tsteps_arr[i], sensealg = ForwardDiffSensitivity())
         ode_data = Array(sol_data) 
         ode_data .+=  randn(size(ode_data)) .* 0.1
         push!(ode_datas, ode_data)
