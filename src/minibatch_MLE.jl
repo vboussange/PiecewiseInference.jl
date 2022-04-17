@@ -61,39 +61,51 @@ Returns `minloss, p_trained, ranges, losses, θs`.
 - `p_labs` : labels of the true parameters
 - `threshold` : default to 1e-6
 """
-function minibatch_MLE(;group_size,  kwargs...)
+function minibatch_MLE(;group_size::Int,  kwargs...)
     datasize = size(kwargs[:data_set],2)
     _minibatch_MLE(;ranges=_get_ranges(group_size, datasize),  kwargs...)
 end
 
-# TODO: here we implement the scenario where we have independent time series
-# 
-function minibatch_MLE(;group_size,
-                        dataset::Vector, #many different initial conditions
-                        tsteps::Vector, #corresponding time steps
-                        kwargs...)
-    # TODO: this part must be tested
-    @assert length(tsteps) == length(dataset) "Independent time series must be gathered as a Vector"
-    datasize_arr = size.(dataset,2)
-    ranges_arr = [_get_ranges(group_size, datasize_arr[i]) for i in 1:length(dataset)]
+"""
+    minibatch_ML_indep_TS(group_size,data_set,tsteps,kwargs)
+
+Similar to `minibatch_MLE` but for independent time series, where `data_set`
+is a vector containing the independent arrays corresponding to the time series,
+and `tsteps` is a vector where each entry contains the time steps
+of the corresponding time series.
+"""
+function minibatch_ML_indep_TS(;group_size::Int,
+                                data_set::Vector, #many different initial conditions
+                                tsteps::Vector, #corresponding time steps
+                                kwargs...)
+    @assert length(tsteps) == length(data_set) "Independent time series must be gathered as a Vector"
+
+    datasize_arr = size.(data_set,2)
+    ranges_arr = [_get_ranges(group_size, datasize_arr[i]) for i in 1:length(data_set)]
     # updating to take into account the shift provoked by concatenating independent TS
     ranges_shift = cumsum(datasize_arr) # shift
     for i in 2:length(ranges_arr)
-        ranges_arr[i] = ranges_shift[i-1] + ranges_arr[i] #adding shift to the start of the range
+        for j in 1:length(ranges_arr[i]) # looping through rng in each independent TS
+            ranges_arr[i][j] = ranges_shift[i-1] .+ ranges_arr[i][j] #adding shift to the start of the range
+        end
     end
-    dataset_cat = cat(dataset,dims=2)
+    data_set_cat = cat(data_set...,dims=2)
     ranges_cat = vcat(ranges_arr...) # this is the critical step: you need to have a cumsum of tsteps
     tsteps_cat = vcat(tsteps...)
 
-    res = _minibatch_MLE(;ranges_cat, dataset=dataset_cat, tsteps=tsteps_cat, kwargs...)
+    res = _minibatch_MLE(;ranges=ranges_cat,
+        data_set=data_set_cat, 
+        tsteps=tsteps_cat, 
+        continuity_term = 0., # this is essential
+        kwargs...)
     # group back the time series in vector, to have
     # pred = [ [mibibatch_1_ts_1, mibibatch_2_ts_1...],  [mibibatch_1_ts_2, mibibatch_2_ts_2...] ...]
-    pred_arr = similar(dataset)
-    for (i,ranges) in enumerate(ranges_arr)
-        pred_arr[i] = [res.pred[:,rng] for rng in ranges]
-    end
+    pred_arr = similar(data_set)
+    idx_res = [0;cumsum(length.(ranges_arr))]
+    [pred_arr[i] = res.pred[idx_res[i]+1:idx_res[i+1]] for i in 1:length(data_set)]
+
     # reconstructing the problem with original format
-    res_arr = remake(res, tsteps=tsteps, pred = pred_arr, ranges=ranges_arr)
+    res_arr = ResultMLE(res.minloss, res.p_trained, res.p_true, res.p_labs, pred_arr, ranges_arr, res.losses, res.θs)
     return res_arr
 end
 
@@ -235,7 +247,11 @@ Stops the iteration when loss function increases between two iterations.
 Returns an array with all `ResultMLE` obtained during the iteration.
 For kwargs, see `minibatch_MLE`.
 
-# arguments
+# Note 
+- for now, does not support independent time series (`minibatch_ML_indep_TS`).
+- at every iteration, initial conditions are initialised given the predition of previous iterations
+
+# Specific arguments
 - `group_sizes` : array of group sizes to test
 - `optimizers_array`: optimizers_array[i] is an array of optimizers for the trainging processe of `group_sizes[i`
 """

@@ -52,6 +52,6 @@ module EcologyInformedML
     export ParamFun, ResultMLE
     export AIC, AICc, AICc_TREE, moments!, moments, FIM_strouwen, FIM_yazdani, divisors
     export minibatch_loss
-    export minibatch_MLE, iterative_minibatch_MLE
+    export minibatch_MLE, minibatch_ML_indep_TS, iterative_minibatch_MLE
     export plot_convergence
 end # module

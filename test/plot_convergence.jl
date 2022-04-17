@@ -66,7 +66,8 @@ end
     prob = ODEProblem(dudt, u0, tspan, p_true)
     sol_data = solve(prob, Tsit5(), tspan = tspan, saveat = tsteps, sensealg = ForwardDiffSensitivity())
     ode_data = Array(sol_data)
-    maxiters = Dict("ADAM" => 2000, "BFGS" => 100)
+    maxiters = [2000]
+    optimizers = [ADAM(0.01)]
 
     isdir("figures") ? nothing : mkdir("figures") 
     res = minibatch_MLE(p_init = p_init, 
@@ -77,7 +78,7 @@ end
                         alg = Tsit5(), 
                         sensealg =  ForwardDiffSensitivity(),
                         maxiters = maxiters, 
-                        λ = Dict("ADAM" => 0.01, "BFGS" => 0.001),
+                        optimizers = optimizers,
                         p_true = p_true,
                         plotting = true,
                         saving_plots = true,

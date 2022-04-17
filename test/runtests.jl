@@ -1,5 +1,5 @@
 using EcologyInformedML, Test, ForwardDiff, OrdinaryDiffEq
-using DiffEqFlux:group_ranges
+using DiffEqFlux:group_ranges,ADAM,BFGS
 using Revise
 
 @testset "EcologyInformedML" begin
