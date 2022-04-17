@@ -100,7 +100,7 @@ function minibatch_ML_indep_TS(;group_size::Int,
         kwargs...)
     # group back the time series in vector, to have
     # pred = [ [mibibatch_1_ts_1, mibibatch_2_ts_1...],  [mibibatch_1_ts_2, mibibatch_2_ts_2...] ...]
-    pred_arr = similar(data_set)
+    pred_arr = [Array{eltype(data_set[1])}[] for _ in 1:length(data_set)]
     idx_res = [0;cumsum(length.(ranges_arr))]
     [pred_arr[i] = res.pred[idx_res[i]+1:idx_res[i+1]] for i in 1:length(data_set)]
 
