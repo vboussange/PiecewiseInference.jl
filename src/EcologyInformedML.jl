@@ -35,8 +35,30 @@ module EcologyInformedML
         losses::L
         θs::T
     end
+
     function ResultMLE()
         ResultMLE(Inf, [], [], [], [], [], [], [])
+    end
+    
+    """
+        get_u0s(res)
+    Returns initial condition vector estimated`[u_0_1, ..., u_0_n]`
+    , where `n` corresponds to the number of chunks.
+    In the case of independent time series, returns 
+    `[[u_0_TS1_1, ..., u_0_TS1_n],...,[u_0_TS1_1,...]]`, matching the format of `res.pred`.
+
+    """
+    function get_u0s(res::ResultMLE)
+        u0s_init = similar(res.pred)
+        if typeof(res.pred) <: Vector{Vector{Array{T}}} where T
+            # result obtained from fn `minibatch_ML_indep_TS`
+            for (i,TS) in enumerate(res.pred)
+                u0s_init[i] = [chunk[:,1] for chunk in TS]
+            end
+        else
+            u0s_init = [chunk[:,1] for chunk in res.pred]
+        end
+        return u0s_init
     end
 
     include("utils.jl")
@@ -49,7 +71,7 @@ module EcologyInformedML
     end
 
     export ForwardDiffSensitivity # from DiffEqFlux and DiffEqSensitivity
-    export ParamFun, ResultMLE
+    export ParamFun, ResultMLE, get_u0s
     export AIC, AICc, AICc_TREE, moments!, moments, FIM_strouwen, FIM_yazdani, divisors
     export minibatch_loss
     export minibatch_MLE, minibatch_ML_indep_TS, iterative_minibatch_MLE
