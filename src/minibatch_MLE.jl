@@ -18,7 +18,7 @@ end
                 tsteps, 
                 alg, 
                 sensealg,
-                loss_fn = _loss_multiple_shoot_init(data, pred, ic_term),
+                loss_fn = _loss_multiple_shoot_init,
                 optimizers = [ADAM(0.01), BFGS(initial_stepnorm=0.01)],
                 maxiters = [1000, 200],
                 continuity_term = 1.,
@@ -45,6 +45,7 @@ Returns `minloss, p_trained, ranges, losses, θs`.
 - sensealg : sensitivity solver
 
 # optional
+- `loss_fn` : the loss function, that takes as arguments `loss_fn(data, pred, ic_term)`
 - u0_init : if not provided, we initialise from `data_set`
 - `loss_fn` : loss function with arguments `loss_fn(data, pred, ic_term)`
 - `λ` : dictionary with learning rates. `Dict("ADAM" => 0.01, "BFGS" => 0.01)`
@@ -222,6 +223,7 @@ function _minibatch_MLE(;p_init,
     end
     minloss, pred = _loss(res.minimizer)
     p_trained = res.minimizer[dim_prob * nb_group + 1 : end]
+    println("Minimum loss: $minloss")
     return ResultMLE(minloss, p_trained, p_true, p_labs, pred, ranges, losses, θs)
 end
 
