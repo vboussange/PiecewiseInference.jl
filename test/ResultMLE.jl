@@ -1,3 +1,4 @@
+using LinearAlgebra
 
 function dudt(du, u, p, t)
     du .=  0.1 .* u .* ( 1. .- p .* u) 
@@ -16,7 +17,7 @@ ode_data = Array(sol_data)
 optimizers = [ADAM(0.001)]
 maxiters = [10]
 
-@testset "get_u0s for `ResultMLE`` from `minibatch_ML`" begin
+@testset "`ResultMLE`` from `minibatch_ML`" begin
     res = minibatch_MLE(p_init = p_init, 
                         group_size = 101, 
                         data_set = ode_data, 
@@ -29,6 +30,8 @@ maxiters = [10]
                         )
     u0s_init = get_u0s(res)[1]
     @test length(u0s_init) == length(u0)
+
+    @test (AIC(res, ode_data, diagm(ones(length(p_init)))) isa Number)
 end
 
 @testset "get_u0s for `ResultMLE`` from `minibatch_ML_indep_TS`" begin
@@ -56,4 +59,6 @@ end
                         )
     u0s_init = get_u0s(res)[1][1]
     @test length(u0s_init) == length(u0)
+
+    @test (AIC(res, ode_datas, diagm(ones(length(p_init)))) isa Number)
 end
