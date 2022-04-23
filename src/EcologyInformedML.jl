@@ -28,7 +28,7 @@ module EcologyInformedML
 
     export ForwardDiffSensitivity # from DiffEqFlux and DiffEqSensitivity
     export ParamFun, ResultMLE, get_u0s
-    export AIC, AICc, AICc_TREE, moments!, moments, FIM_strouwen, FIM_yazdani, divisors
+    export AIC, AICc, AICc_TREE, moments!, moments, FIM_strouwen, FIM_yazdani, divisors, loglikelihood, RSS
     export minibatch_loss
     export minibatch_MLE, minibatch_ML_indep_TS, iterative_minibatch_MLE
     export plot_convergence
