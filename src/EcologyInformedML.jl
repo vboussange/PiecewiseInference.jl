@@ -4,6 +4,7 @@ module EcologyInformedML
     using OrdinaryDiffEq
     using DiffEqFlux
     using Requires
+    using DocStringExtensions
 
     using ForwardDiff
     using LinearAlgebra

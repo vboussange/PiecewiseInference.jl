@@ -2,24 +2,14 @@
 # trajectory for ensmeble problems, for minibatch_loss simplu put 0
 lss = ["-","-."] 
 fontdict = Dict("size" => 16)
-_cmap = PyPlot.cm.get_cmap("tab20", 20)
-COLOR_PALETTE = [_cmap(i) for i in 1:20]
 """
-    plot_convergence(p_trained, 
-                    losses, 
-                    pred, 
-                    ranges, 
-                    tsteps;
-                    p_true = nothing, 
-                    p_labs = nothing,
-                    θs = []
-                    )
-               
+$(SIGNATURES)
+
 # Arguments:
 
 # Optional
 - p_true : optional `Dict("p_true" => [val1, val2], "labs" => ["p1","p2",...] )`
-- 
+- color_palette : for the time series. For now, the option is not provided to the user.
 """
 function plot_convergence(losses, 
                             pred, 
@@ -30,11 +20,17 @@ function plot_convergence(losses,
                             p_labs = nothing,
                             θs = [],
                             p_trained = [],
-                            color_palette = COLOR_PALETTE
+                            color_palette = nothing
                             )
 
     PyPlot.close("all")
-    dim_prob = size(data_set,1)
+    dim_prob = size(pred,1)
+
+    if isnothing(color_palette)
+        _cmap = PyPlot.cm.get_cmap("tab20", min(dim_prob,20))
+        color_palette = [_cmap(i) for i in 1:min(dim_prob,20)]
+    end
+
     nplots = min(2, size(pred,3)) + 1 + !isnothing(p_true) 
     if nplots == 2 # for EnsembleProblems
         fig, axs = PyPlot.subplots(1, 2, figsize = (10, 5)) # only loss and time series
@@ -63,17 +59,21 @@ function plot_convergence(losses,
         for g in 1:length(ranges)
             _pred = pred[g]
             _tsteps = tsteps[ranges[g]]
-            for i in 1:min(dim_prob,length(COLOR_PALETTE))
-                for k in 1:min(2, size(pred,3)) # for EnsembleProblems
+            for k in 1:min(2, size(pred,3)) # for EnsembleProblems
+                for i in 1:size(_pred,1)
                     axs[k+1].plot(_tsteps, _pred[i,:, k], color = color_palette[i], ls = lss[1], label = (i == 1) && (g == 1) ? "Recovered dynamics" : nothing,)
+                end
+                for i in 1:size(data_set,1)
                     axs[k+1].plot(_tsteps, data_set[i,ranges[g],k], color = color_palette[i], ls = lss[2], label =  (i == 1) && (g == 1) ? "Data" : nothing)
                 end
             end
         end
     else
-        for i in 1:dim_prob # normal run
-            for k in 1:min(2, size(pred,3))
+        for k in 1:min(2, size(pred,3))
+            for i in 1:dim_prob # normal run
                 axs[k+1].plot(tsteps, pred[i,:,k], color = color_palette[i], ls = lss[1], label = (i == 1) ? "Recovered dynamics" : nothing)
+            end
+            for i in 1:size(data_set,1)
                 axs[k+1].plot(tsteps, data_set[i,:,k], color = color_palette[i], ls = lss[2], label =  (i == 1) ? "Data" : nothing)
             end
         end

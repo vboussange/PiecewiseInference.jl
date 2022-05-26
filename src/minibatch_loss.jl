@@ -1,8 +1,11 @@
 """
+$(SIGNATURES)
+
 Returns a tuple (`loss`, `pred`) obtained from minibatching of the 
 time series `ode_data` into segments with time steps given by `tsteps[ranges[i]]`.
 The initial conditions are assumed free parameters for each segments.
-Arguments:
+
+# Arguments:
   - `θ`: [u0,p] where `p` corresponds to the parameters of ode function.
   - `ode_data`: Original Data to be modelled.
   - `tsteps`: Timesteps on which ode_data was calculated.
@@ -20,7 +23,7 @@ Arguments:
   [Local Sensitivity Analysis](https://diffeq.sciml.ai/dev/analysis/sensitivity/) and
   [Common Solver Arguments](https://diffeq.sciml.ai/dev/basics/common_solver_opts/)
   documentation for more details.
-Note:
+# Note:
 The parameter 'continuity_term' should be a relatively big number to enforce a large penalty
 whenever the last point of any group doesn't coincide with the first point of next group.
 """
@@ -98,5 +101,5 @@ end
 # and current initial condition in ode_data
 function _default_continuity_loss(û_end::AbstractArray,
     u_0::AbstractArray)
-    return sum(abs, û_end - u_0)
+    return  mean((û_end - u_0).^2)
 end

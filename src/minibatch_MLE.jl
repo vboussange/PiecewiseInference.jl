@@ -1,7 +1,8 @@
 # for more intuition on kwargs : https://discourse.julialang.org/t/passing-kwargs-can-overwrite-other-keyword-arguments/74933
 
 """
-    _loss_multiple_shoot_init(data, pred, ic_term)
+$(SIGNATURES)
+
 default loss function for `minibatch_MLE`.
 """
 function _loss_multiple_shoot_init(data, pred, ic_term)
@@ -39,13 +40,16 @@ Returns `minloss, p_trained, ranges, losses, θs`.
 - p_init : initial guess for parameters of `prob`
 - group_size : size of segments
 - data_set : data
-- prob : ode problem
+- prob : ODE problem for the state variables.
 - tsteps : corresponding to data
 - alg : ODE solver
 - sensealg : sensitivity solver
 
 # optional
-- `loss_fn` : the loss function, that takes as arguments `loss_fn(data, pred, ic_term)`
+- `loss_fn` : the loss function, that takes as arguments `loss_fn(data, pred, ic_term)` where 
+    `data` is the training data and `pred` corresponds to the predicted state variables. 
+    `loss_fn` must transform the pred into the observables, with a function 
+    `h` that maps the state variables to the observables. By default, `h` is taken as the identity.
 - u0_init : if not provided, we initialise from `data_set`
 - `loss_fn` : loss function with arguments `loss_fn(data, pred, ic_term)`
 - `λ` : dictionary with learning rates. `Dict("ADAM" => 0.01, "BFGS" => 0.01)`
@@ -68,7 +72,7 @@ function minibatch_MLE(;group_size::Int,  kwargs...)
 end
 
 """
-    minibatch_ML_indep_TS(group_size,data_set,tsteps,kwargs)
+$(SIGNATURES)
 
 Similar to `minibatch_MLE` but for independent time series, where `data_set`
 is a vector containing the independent arrays corresponding to the time series,
@@ -91,7 +95,7 @@ function minibatch_ML_indep_TS(;group_size::Int,
         end
     end
     data_set_cat = cat(data_set...,dims=2)
-    ranges_cat = vcat(ranges_arr...) # this is the critical step: you need to have a cumsum of tsteps
+    ranges_cat = vcat(ranges_arr...)
     tsteps_cat = vcat(tsteps...)
 
     res = _minibatch_MLE(;ranges=ranges_cat,
@@ -170,7 +174,10 @@ function _minibatch_MLE(;p_init,
     end
 
     # initialising with data_set if not provided
-    isnothing(u0s_init) ? u0s_init = reshape(data_set[:,first.(ranges),:],:) : nothing
+    if isnothing(u0s_init) 
+        @assert (size(data_set,1) == dim_prob) "The dimension of the training data does not correspond to the dimension of the state variables. This probably means that the training data corresponds to observables different from the state variables. In this case, you need to provide manually `u0s_init`." 
+        u0s_init = reshape(data_set[:,first.(ranges),:],:)
+    end
     # making sure that u0s_init are positive, otherwise we might have some numerical difficulties
     u0s_init[u0s_init .< 0.] .= 1e-3 # alternative formulation : `u0s_init = max.(u0s_init,1e-3)`
     θ = [u0s_init;p_init]
@@ -240,10 +247,8 @@ end
 
 
 """
-    iterative_minibatch_MLE(; 
-                    group_sizes,
-                    optimizers_array,
-                    kwargs...)
+$(SIGNATURES)
+
 Performs a iterative minibatch MLE, iterating over `group_sizes`. 
 Stops the iteration when loss function increases between two iterations.
 

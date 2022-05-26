@@ -1,6 +1,6 @@
 """ 
-    ResultMLE(minloss, p_trained, pred, ranges, losses,θs)
-ResultMLE()
+$(SIGNATURES)
+
 Container for ouputs of MLE.
 
 # Notes
@@ -23,7 +23,8 @@ function ResultMLE()
 end
 
 """
-    get_u0s(res)
+$(SIGNATURES)
+
 Returns initial condition vector estimated`[u_0_1, ..., u_0_n]`
 , where `n` corresponds to the number of chunks.
 In the case of independent time series, returns 
@@ -44,7 +45,8 @@ function get_u0s(res::ResultMLE)
 end
 
 """
-    RSS(res::ResultMLE, data_set::Array)
+$(SIGNATURES)
+
 Computes the RSS of `res` given `data_set`.
 """
 function RSS(res::ResultMLE, data_set::Array)
@@ -61,7 +63,8 @@ function RSS(res::ResultMLE, data_set::Array)
 end
 
 """
-    loglikelihood(res::ResultMLE, data_set::Array, Σ::Array)
+$(SIGNATURES)
+
 Computes the loglikelihood of `res` given the observational noise variance covariance matrix Σ.
 """
 function loglikelihood(res::ResultMLE, data_set::Array, Σ::Array)
@@ -97,7 +100,8 @@ end
 # see https://juliaeconomics.com/2014/06/16/numerical-maximum-likelihood-the-ols-example/
 
 """
-    AIC(res::ResultMLE, data_set::Array, Σ::Array)
+$(SIGNATURES)
+
 Computes the AIC of `res` given the observational noise variance covariance matrix Σ.
 """
 function AIC(res::ResultMLE, data_set::Array, Σ::Array)

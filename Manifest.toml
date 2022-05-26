@@ -680,10 +680,10 @@ uuid = "929cbde3-209d-540e-8aea-75f648917ca0"
 version = "4.9.1"
 
 [[deps.LLVMExtra_jll]]
-deps = ["Artifacts", "JLLWrappers", "LazyArtifacts", "Libdl", "Pkg"]
-git-tree-sha1 = "5558ad3c8972d602451efe9d81c78ec14ef4f5ef"
+deps = ["Artifacts", "JLLWrappers", "LazyArtifacts", "Libdl", "Pkg", "TOML"]
+git-tree-sha1 = "43817483288cdceb8d3258756040a3e63578bb1b"
 uuid = "dad2f222-ce93-54a1-a47d-0025e8a3acab"
-version = "0.0.14+2"
+version = "0.0.14+3"
 
 [[deps.LaTeXStrings]]
 git-tree-sha1 = "f2355693d6778a178ade15952b7ac47a4ff97996"
