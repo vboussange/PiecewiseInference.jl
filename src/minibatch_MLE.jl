@@ -12,26 +12,7 @@ function _loss_multiple_shoot_init(data, pred, ic_term)
 end
 
 """
-    minibatch_MLE(;p_init, 
-                group_size, 
-                data_set, 
-                prob, 
-                tsteps, 
-                alg, 
-                sensealg,
-                loss_fn = _loss_multiple_shoot_init,
-                optimizers = [ADAM(0.01), BFGS(initial_stepnorm=0.01)],
-                maxiters = [1000, 200],
-                continuity_term = 1.,
-                ic_term = 1.,
-                verbose = true,
-                plotting = false,
-                saving_plots = false,
-                saving_dir = "plot_convergence",
-                info_per_its=50,
-                p_true = nothing,
-                p_labs = nothing,
-                threshold = 1e-6)
+$(SIGNATURES)
 
 Maximum likelihood estimation with minibatching. Loops through ADAM and BFGS.
 Returns `minloss, p_trained, ranges, losses, θs`.
@@ -50,7 +31,7 @@ Returns `minloss, p_trained, ranges, losses, θs`.
     `data` is the training data and `pred` corresponds to the predicted state variables. 
     `loss_fn` must transform the pred into the observables, with a function 
     `h` that maps the state variables to the observables. By default, `h` is taken as the identity.
-- u0_init : if not provided, we initialise from `data_set`
+- `u0_init` : if not provided, we initialise from `data_set`
 - `loss_fn` : loss function with arguments `loss_fn(data, pred, ic_term)`
 - `λ` : dictionary with learning rates. `Dict("ADAM" => 0.01, "BFGS" => 0.01)`
 - `maxiters` : dictionary with maximum iterations. Dict("ADAM" => 2000, "BFGS" => 1000),
@@ -59,9 +40,9 @@ Returns `minloss, p_trained, ranges, losses, θs`.
 - `verbose` : displaying loss
 - `info_per_its` = 50,
 - `plotting` : plotting convergence loss
-- `saving_plots` = false : saves plotting figure in dir `saving_dir`
-- `saving_dir` = "plot_convergence" : directory and name without extension of the plotting file
 - `info_per_its` = 50,
+- `cb` : call back function.
+    Must be of the form `cb(θs, p_trained, losses, pred, ranges)`
 - `p_true` : true params
 - `p_labs` : labels of the true parameters
 - `threshold` : default to 1e-6
@@ -130,9 +111,8 @@ function _minibatch_MLE(;p_init,
                         ic_term = 1.,
                         verbose = true,
                         plotting = false,
-                        saving_plots = false,
-                        saving_dir = "plot_convergence",
                         info_per_its=50,
+                        cb = nothing,
                         p_true = nothing,
                         p_labs = nothing,
                         threshold = 1e-16,
@@ -190,17 +170,19 @@ function _minibatch_MLE(;p_init,
         isnothing(p_true) ? nothing : push!(θs, sum((p_trained .- p_true).^2))
         if length(losses)%info_per_its==0
             verbose ? println("Current loss after $(length(losses)) iterations: $(losses[end])") : nothing
+            if !isnothing(cb)
+                cb(θs, p_trained, losses, pred, ranges)
+            end
             if plotting
-                fig = plot_convergence(losses, 
-                                        pred, 
-                                        data_set, 
-                                        ranges, 
-                                        tsteps, 
-                                        p_true = p_true, 
-                                        p_labs = p_labs, 
-                                        θs = θs, 
-                                        p_trained = p_trained)
-                saving_plots ? fig.savefig(saving_dir*"-$(length(losses)÷info_per_its).png", dpi = 500) : nothing
+                plot_convergence(losses, 
+                                pred, 
+                                data_set, 
+                                ranges, 
+                                tsteps, 
+                                p_true = p_true, 
+                                p_labs = p_labs, 
+                                θs = θs, 
+                                p_trained = p_trained)
             end
         end
         if l < threshold
