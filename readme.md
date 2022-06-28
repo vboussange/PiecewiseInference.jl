@@ -10,7 +10,7 @@ Suite for inverse modeling in ecology, combining ML techniques and mechanistic e
 Open Julia and type the following
 ```julia
 using Pkg
-Pkg.add("https://github.com/vboussange/EcologyInformedML.jl)
+Pkg.add("https://github.com/vboussange/EcologyInformedML.jl")
 ```
 This will download the latest version from the git repo and download all dependencies.
 
