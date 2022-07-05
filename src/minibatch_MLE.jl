@@ -92,6 +92,8 @@ function minibatch_ML_indep_TS(;group_size::Int,
     [pred_arr[i] = res.pred[idx_res[i]+1:idx_res[i+1]] for i in 1:length(data_set)]
 
     # reconstructing the problem with original format
+    ranges_arr = [_get_ranges(group_size, datasize_arr[i]) for i in 1:length(data_set)]
+
     res_arr = ResultMLE(res.minloss, res.p_trained, res.p_true, res.p_labs, pred_arr, ranges_arr, res.losses, res.θs)
     return res_arr
 end
