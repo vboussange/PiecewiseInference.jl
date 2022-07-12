@@ -48,15 +48,17 @@ end
 $(SIGNATURES)
 
 Computes the RSS of `res` given `data_set`.
+# Argument:
+- `fn` is set to `identity` but can be e.g. `log` if lognormal loss used.
 """
-function RSS(res::ResultMLE, data_set::Array)
+function RSS(res::ResultMLE, data_set::Array, fn = identity)
     if typeof(res.pred) <: Vector{Vector{Array{T}}} where T
         error("not yet implemented for independent time series")
     else
         # version where we reomve the additional time point used for multiple shooting
         # ???
         # version where the additional time point is kept
-        ϵ = cat( [res.pred[i] .- data_set[:,rng] for (i,rng) in enumerate(res.ranges)]..., dims=2)
+        ϵ = cat( [fn.(res.pred[i]) .- fn.(data_set[:,rng]) for (i,rng) in enumerate(res.ranges)]..., dims=2)
         rss = sum(ϵ.^2) 
     end
     return rss
@@ -66,8 +68,12 @@ end
 $(SIGNATURES)
 
 Computes the loglikelihood of `res` given the observational noise variance covariance matrix Σ.
+# Options
+By default, normal observational noise is assumed, 
+but lognormal observational noise can be chosen by setting
+`distrib=MvLogNormal, fn=log`
 """
-function loglikelihood(res::ResultMLE, data_set::Array, Σ::Array)
+function loglikelihood(res::ResultMLE, data_set::Array, Σ::Array; distrib=MvNormal, fn=identity)
     if typeof(res.pred) <: Vector{Vector{Array{T}}} where T
         dim_prob = size(data_set[1],1)
         nb_ts = length(res.ranges)
@@ -78,8 +84,7 @@ function loglikelihood(res::ResultMLE, data_set::Array, Σ::Array)
             push!(data_set_simu_vect_k,res.pred[k][end])
             pred_k = cat(data_set_simu_vect_k..., dims=2)
             data_set_k = data_set[k]
-            ϵ = (data_set_k - pred_k)
-            logl += sum(logpdf(MvNormal(zeros(dim_prob), Σ), ϵ_i) for ϵ_i in eachcol(ϵ) ) 
+            logl += sum(logpdf(distrib(fn.(pred_k[:,i]), Σ), data_set_k[:,i]) for i in 1:length(pred_k) ) 
         end
     else
         # version where we reomve the additional time point used for multiple shooting
@@ -109,5 +114,15 @@ function AIC(res::ResultMLE, data_set::Array, Σ::Array)
     logl = loglikelihood(res, data_set, Σ)
     AIC_likelihood = - 2 * logl + 2 * nparams
 
+    return AIC_likelihood
+end
+
+"""
+$(SIGNATURES)
+
+Computes the AIC given loglikelihood `logl` and number of parameters `nparams`.
+"""
+function AIC(logl::T, nparams::P) where {T <: AbstractFloat, P <: Integer}
+    AIC_likelihood = - 2 * logl + 2 * nparams
     return AIC_likelihood
 end
