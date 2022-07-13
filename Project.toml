@@ -1,7 +1,7 @@
 name = "EcologyInformedML"
 uuid = "27a201f4-b6a1-4745-b96e-0c27845dca54"
 authors = ["Victor <bvictor@ethz.ch>"]
-version = "0.2.5"
+version = "0.2.6"
 
 [deps]
 DiffEqFlux = "aae7a2af-3d4f-5e19-a356-7da93b79d9d0"

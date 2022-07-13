@@ -7,19 +7,15 @@ Container for ouputs of MLE.
 `res = ResultMLE()` has all fields empty but `res.minloss` which is set to `Inf`.
 
 """
-struct ResultMLE{M,P,Pp,Pl,Pr,R,L,T}
-    minloss::M
-    p_trained::P
-    p_true::Pp
-    p_labs::Pl
-    pred::Pr
-    ranges::R
-    losses::L
-    θs::T
-end
-
-function ResultMLE()
-    ResultMLE(Inf, [], [], [], [], [], [], [])
+Base.@kwdef struct ResultMLE{M,P,Pp,Pl,Pr,R,L,T}
+    minloss::M = Inf
+    p_trained::P = []
+    p_true::Pp = []
+    p_labs::Pl = []
+    pred::Pr = []
+    ranges::R = []
+    losses::L = []
+    θs::T = []
 end
 
 """

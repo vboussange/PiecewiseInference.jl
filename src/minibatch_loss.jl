@@ -4,6 +4,7 @@ $(SIGNATURES)
 Returns a tuple (`loss`, `pred`) obtained from minibatching of the 
 time series `ode_data` into segments with time steps given by `tsteps[ranges[i]]`.
 The initial conditions are assumed free parameters for each segments.
+! the dynamics is assumed to lie in R⁺ !
 
 # Arguments:
   - `θ`: [u0,p] where `p` corresponds to the parameters of ode function.

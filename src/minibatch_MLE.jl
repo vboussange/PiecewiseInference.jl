@@ -85,16 +85,19 @@ function minibatch_ML_indep_TS(;group_size::Int,
         kwargs...,
         continuity_term = 0.,)  # this overrides kwargs, essential as it does not make sense to have continuity across indepdenent TS
         # NOTE: we could have continuity within a time series, this must be carefully thought out.
-    # group back the time series in vector, to have
-    # pred = [ [mibibatch_1_ts_1, mibibatch_2_ts_1...],  [mibibatch_1_ts_2, mibibatch_2_ts_2...] ...]
-    pred_arr = [Array{eltype(data_set[1])}[] for _ in 1:length(data_set)]
-    idx_res = [0;cumsum(length.(ranges_arr))]
-    [pred_arr[i] = res.pred[idx_res[i]+1:idx_res[i+1]] for i in 1:length(data_set)]
-
+        
     # reconstructing the problem with original format
     ranges_arr = [_get_ranges(group_size, datasize_arr[i]) for i in 1:length(data_set)]
-
-    res_arr = ResultMLE(res.minloss, res.p_trained, res.p_true, res.p_labs, pred_arr, ranges_arr, res.losses, res.θs)
+    if kwargs[:save_pred]
+        # group back the time series in vector, to have
+        # pred = [ [mibibatch_1_ts_1, mibibatch_2_ts_1...],  [mibibatch_1_ts_2, mibibatch_2_ts_2...] ...]
+        pred_arr = [Array{eltype(data_set[1])}[] for _ in 1:length(data_set)]
+        idx_res = [0;cumsum(length.(ranges_arr))]
+        [pred_arr[i] = res.pred[idx_res[i]+1:idx_res[i+1]] for i in 1:length(data_set)]
+        res_arr = ResultMLE(res.minloss, res.p_trained, res.p_true, res.p_labs, pred_arr, ranges_arr, res.losses, res.θs)
+    else
+        res_arr = ResultMLE(res.minloss, res.p_trained, res.p_true, res.p_labs, [], ranges_arr, res.losses, res.θs)
+    end
     return res_arr
 end
 
@@ -118,6 +121,7 @@ function _minibatch_MLE(;p_init,
                         p_true = nothing,
                         p_labs = nothing,
                         threshold = 1e-16,
+                        savepred = true
                         )
     dim_prob = length(prob.u0) #used by loss_nm
     @assert length(optimizers) == length(maxiters)
@@ -215,7 +219,13 @@ function _minibatch_MLE(;p_init,
     minloss, pred = _loss(res.minimizer)
     p_trained = res.minimizer[dim_prob * nb_group + 1 : end]
     println("Minimum loss: $minloss")
-    return ResultMLE(minloss, p_trained, p_true, p_labs, pred, ranges, losses, θs)
+    
+    if save_pred
+        res = ResultMLE(minloss, p_trained, p_true, p_labs, pred, ranges, losses, θs)
+    else
+        res = ResultMLE(minloss, p_trained, p_true, p_labs, [], ranges, losses, θs)
+    end
+    return res
 end
 
 function _get_ranges(group_size, datasize)
