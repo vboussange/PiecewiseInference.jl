@@ -1,13 +1,13 @@
 using Documenter
-using EcologyInformedML
+using MiniBatchInference
 
 makedocs(
-    sitename = "EcologyInformedML",
+    sitename = "MiniBatchInference",
     format = Documenter.HTML(),
-    modules = [EcologyInformedML]
+    modules = [MiniBatchInference]
 )
 
-deploydocs(repo = "github.com/vboussange/EcologyInformedML.jl", devbranch="main")
+deploydocs(repo = "github.com/vboussange/MiniBatchInference.jl", devbranch="main")
 
 # Documenter can also automatically deploy documentation to gh-pages.
 # See "Hosting Documentation" and deploydocs() in the Documenter manual

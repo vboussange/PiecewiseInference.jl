@@ -1,6 +1,6 @@
 __precompile__(false)
 
-module EcologyInformedML
+module MiniBatchInference
     using OrdinaryDiffEq
     using DiffEqFlux
     using Requires
