@@ -61,8 +61,8 @@ jobs:
       - run: |
           julia --project=docs -e '
             using Documenter: doctest
-            using EcologyInformedML     # change MyAwesomePackage to the name of your package
-            doctest(EcologyInformedML)' # change MyAwesomePackage to the name of your package
+            using MiniBatchInference     # change MyAwesomePackage to the name of your package
+            doctest(MiniBatchInference)' # change MyAwesomePackage to the name of your package
       - run: julia --project=docs docs/make.jl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

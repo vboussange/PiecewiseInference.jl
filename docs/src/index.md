@@ -1,9 +1,9 @@
-# EcologyInformedML.jl
+# MiniBatchInference.jl
 
 ```@eval
 DocStringExtensions.README
 ```
 
 ```@autodocs
-Modules = [EcologyInformedML]
+Modules = [MiniBatchInference]
 ```
