@@ -212,11 +212,11 @@ function _minibatch_MLE(;p_init,
     θs = Float64[]
 
 
-    println("***************\nTraining started\n***************")
+    @info "Training started"
     objectivefun = OptimizationFunction((x,p) -> _loss(x), Optimization.AutoForwardDiff())
     opt = first(optimizers)
 
-    println("Running optimizer $(typeof(opt))")
+    @info "Running optimizer $(typeof(opt))"
     optprob = Optimization.OptimizationProblem(objectivefun, θ)
     res = Optimization.solve(optprob, opt, callback=callback, maxiters = first(epochs))
     for(i, opt) in enumerate(optimizers[2:end])
@@ -225,7 +225,7 @@ function _minibatch_MLE(;p_init,
     end
     minloss, pred = _loss(res.minimizer)
     p_trained = res.minimizer[dim_prob * nb_group + 1 : end]
-    println("Minimum loss: $minloss")
+    @info "Minimum loss: $minloss"
     
     if save_pred
         res = ResultMLE(minloss, p_trained, p_true, p_labs, pred, ranges, losses, θs)
