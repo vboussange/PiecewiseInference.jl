@@ -14,7 +14,7 @@ prob = ODEProblem(dudt, u0, tspan, p_true)
 sol_data = solve(prob, Tsit5(), saveat = tsteps, sensealg = ForwardDiffSensitivity())
 ode_data = Array(sol_data)
 optimizers = [ADAM(0.001)]
-maxiters = [5000]
+epochs = [5000]
 
 @testset "minibatch MLE" begin
     res = minibatch_MLE(p_init = p_init, 
@@ -24,7 +24,7 @@ maxiters = [5000]
                         tsteps = tsteps, 
                         alg = Tsit5(), 
                         sensealg =  ForwardDiffSensitivity(),
-                        maxiters = maxiters, 
+                        epochs = epochs, 
                         optimizers = optimizers,
                         )
     @test all(isapprox.(res.p_trained, p_true, atol = 1e-4 ))
@@ -41,7 +41,7 @@ end
                         alg = Tsit5(), 
                         sensealg = ForwardDiffSensitivity(),
                         optimizers = optimizers,
-                        maxiters = maxiters)
+                        epochs = epochs)
     @test all( isapprox.(res.p_trained, p_true, rtol = 1e-1))
 end
 
@@ -59,7 +59,7 @@ end
     end
 
     optimizers = [ADAM(0.001)]
-    maxiters = [5000]
+    epochs = [5000]
 
     res = minibatch_ML_indep_TS(data_set = ode_datas, 
                         group_size = 31, 
@@ -68,7 +68,7 @@ end
                         prob = prob, 
                         alg = Tsit5(), 
                         sensealg =  ForwardDiffSensitivity(),
-                        maxiters = maxiters, 
+                        epochs = epochs, 
                         optimizers = optimizers,
                         )
     @test all(isapprox.(res.p_trained, p_true, rtol = 1e-1 ))
@@ -95,10 +95,10 @@ end
     div_data = divisors(datasize)
     group_sizes = vcat(group_size_init, div_data[div_data .> group_size_init] .+ 1)
     optimizers_array = [[ADAM(0.001)] for _ in 1:length(group_sizes)]
-    maxiters = [5000]
+    epochs = [5000]
     res_array = iterative_minibatch_MLE(group_sizes = group_sizes, 
                                                 optimizers_array = optimizers_array,
-                                                maxiters = maxiters,
+                                                epochs = epochs,
                                                 p_init = p_init,  
                                                 data_set = ode_data_wnoise, 
                                                 prob = prob, 

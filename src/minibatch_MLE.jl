@@ -34,7 +34,7 @@ Returns `minloss, p_trained, ranges, losses, θs`.
 - `u0_init` : if not provided, we initialise from `data_set`
 - `loss_fn` : loss function with arguments `loss_fn(data, pred, ic_term)`
 - `λ` : dictionary with learning rates. `Dict("ADAM" => 0.01, "BFGS" => 0.01)`
-- `maxiters` : dictionary with maximum iterations. Dict("ADAM" => 2000, "BFGS" => 1000),
+- `epochs` : dictionary with maximum iterations. Dict("ADAM" => 2000, "BFGS" => 1000),
 - `continuity_term` : weight on continuity conditions
 - `ic_term` : weight on initial conditions
 - `verbose` : displaying loss
@@ -111,7 +111,7 @@ function _minibatch_MLE(;p_init,
                         sensealg,
                         loss_fn = _loss_multiple_shoot_init,
                         optimizers = [ADAM(0.01), BFGS(initial_stepnorm=0.01)],
-                        maxiters = [1000, 200],
+                        epochs = [1000, 200],
                         continuity_term = 1.,
                         ic_term = 1.,
                         verbose = true,
@@ -121,10 +121,11 @@ function _minibatch_MLE(;p_init,
                         p_true = nothing,
                         p_labs = nothing,
                         threshold = 1e-16,
-                        savepred = true
+                        save_pred = true, 
+                        kwargs...
                         )
     dim_prob = length(prob.u0) #used by loss_nm
-    @assert length(optimizers) == length(maxiters)
+    @assert length(optimizers) == length(epochs)
 
     # minibatch loss
     function loss_mb(θ)
@@ -144,7 +145,7 @@ function _minibatch_MLE(;p_init,
         params = @view θ[dim_prob + 1: end] # params of the problem
         u0_i = abs.(θ[1:dim_prob])
         prob_i = remake(prob; p=params, tspan=(tsteps[1], tsteps[end]), u0=u0_i)
-        sol = solve(prob_i, alg, saveat = tsteps, sensealg = sensealg, kwargshandle=KeywordArgError)
+        sol = solve(prob_i, alg, saveat = tsteps, sensealg = sensealg, kwargshandle=KeywordArgError, kwargs...)
         sol.retcode == :Success ? nothing : return Inf, []
         pred = sol |> Array
         l = loss_fn(data_set, pred, ic_term)
@@ -211,10 +212,10 @@ function _minibatch_MLE(;p_init,
     println("***************\nTraining started\n***************")
     opt = first(optimizers)
     println("Running optimizer $(typeof(opt))")
-    res = DiffEqFlux.sciml_train(_loss, θ, opt, cb=callback, maxiters = first(maxiters))
+    res = DiffEqFlux.sciml_train(_loss, θ, opt, cb=callback, maxiters = first(epochs))
     for(i, opt) in enumerate(optimizers[2:end])
         println("Running optimizer $(typeof(opt))")
-        res =  DiffEqFlux.sciml_train(_loss, res.minimizer, opt, cb=callback, maxiters = maxiters[i+1])
+        res =  DiffEqFlux.sciml_train(_loss, res.minimizer, opt, cb=callback, maxiters = epochs[i+1])
     end
     minloss, pred = _loss(res.minimizer)
     p_trained = res.minimizer[dim_prob * nb_group + 1 : end]

@@ -66,7 +66,7 @@ end
     prob = ODEProblem(dudt, u0, tspan, p_true)
     sol_data = solve(prob, Tsit5(), tspan = tspan, saveat = tsteps, sensealg = ForwardDiffSensitivity())
     ode_data = Array(sol_data)
-    maxiters = [2000]
+    epochs = [2000]
     optimizers = [ADAM(0.01)]
 
     isdir("figures") ? nothing : mkdir("figures") 
@@ -77,7 +77,7 @@ end
                         tsteps = tsteps, 
                         alg = Tsit5(), 
                         sensealg =  ForwardDiffSensitivity(),
-                        maxiters = maxiters, 
+                        epochs = epochs, 
                         optimizers = optimizers,
                         p_true = p_true,
                         plotting = true,
