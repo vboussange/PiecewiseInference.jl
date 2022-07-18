@@ -56,7 +56,7 @@ function minibatch_loss(
         sol = solve(prob_i, solver; saveat=tsteps[rg], kwargshandle=KeywordArgError, kwargs...)
 
         # Abort and return infinite loss if one of the integrations failed
-        sol.retcode == :Success ? nothing : return Inf, group_predictions
+        sol.retcode == :Success && sol.retcode !== :Terminated ? nothing : return Inf, group_predictions
 
         û = sol |> Array
         loss += loss_function(u, û)
