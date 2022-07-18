@@ -13,7 +13,7 @@ u0 = ones(2)
 prob = ODEProblem(dudt, u0, tspan, p_true)
 sol_data = solve(prob, Tsit5(), saveat = tsteps, sensealg = ForwardDiffSensitivity())
 ode_data = Array(sol_data)
-optimizers = [ADAM(0.001)]
+optimizers = [Adam(0.001)]
 epochs = [5000]
 
 @testset "minibatch MLE" begin
@@ -58,7 +58,7 @@ end
         push!(ode_datas, ode_data)
     end
 
-    optimizers = [ADAM(0.001)]
+    optimizers = [Adam(0.001)]
     epochs = [5000]
 
     res = minibatch_ML_indep_TS(data_set = ode_datas, 
@@ -94,7 +94,7 @@ end
     datasize = length(tsteps)
     div_data = divisors(datasize)
     group_sizes = vcat(group_size_init, div_data[div_data .> group_size_init] .+ 1)
-    optimizers_array = [[ADAM(0.001)] for _ in 1:length(group_sizes)]
+    optimizers_array = [[Adam(0.001)] for _ in 1:length(group_sizes)]
     epochs = [5000]
     res_array = iterative_minibatch_MLE(group_sizes = group_sizes, 
                                                 optimizers_array = optimizers_array,

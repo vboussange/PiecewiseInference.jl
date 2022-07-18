@@ -60,9 +60,9 @@ function minibatch_loss(
 
         û = sol |> Array
         loss += loss_function(u, û)
-        Zygote.ignore() do # this relates to issue https://github.com/FluxML/Zygote.jl/issues/571
-            group_predictions[i] = û
-        end
+        # Zygote.ignore() do # this relates to issue https://github.com/FluxML/Zygote.jl/issues/571
+        group_predictions[i] = û
+        # end
         if i < nb_group && continuity_term > 0.
             # Ensure continuity between last state in previous prediction
             # and current initial condition in ode_data

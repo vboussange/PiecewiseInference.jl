@@ -67,7 +67,7 @@ end
     sol_data = solve(prob, Tsit5(), tspan = tspan, saveat = tsteps, sensealg = ForwardDiffSensitivity())
     ode_data = Array(sol_data)
     epochs = [2000]
-    optimizers = [ADAM(0.01)]
+    optimizers = [Adam(0.01)]
 
     isdir("figures") ? nothing : mkdir("figures") 
     res = minibatch_MLE(p_init = p_init, 

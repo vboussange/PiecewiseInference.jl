@@ -1,5 +1,7 @@
 using MiniBatchInference, Test, ForwardDiff, OrdinaryDiffEq
-using DiffEqFlux:group_ranges,ADAM,BFGS,ForwardDiffSensitivity
+using DiffEqSensitivity:ForwardDiffSensitivity
+using OptimizationOptimJL:BFGS
+using OptimizationOptimisers:Adam
 using Revise
 
 @testset "MiniBatchInference" begin

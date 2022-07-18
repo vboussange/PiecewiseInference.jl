@@ -1,5 +1,33 @@
-# TODO: for now this file has not be used and 
-# it needs to checked
+"""
+$(SIGNATURES)
+Get ranges that partition data of length `datasize` in groups of `groupsize` observations.
+If the data isn't perfectly dividable by `groupsize`, the last group contains
+the reminding observations.
+Taken from https://github.com/SciML/DiffEqFlux.jl/blob/80c4247c19860d0422211d6a65283d896eeaa831/src/multiple_shooting.jl#L273-L303
+```julia
+group_ranges(datasize, groupsize)
+```
+Arguments:
+- `datasize`: amount of data points to be partitioned
+- `groupsize`: maximum amount of observations in each group
+Example:
+```julia-repl
+julia> group_ranges(10, 5)
+3-element Vector{UnitRange{Int64}}:
+ 1:5
+ 5:9
+ 9:10
+```
+"""
+function group_ranges(datasize::Integer, groupsize::Integer)
+    2 <= groupsize <= datasize || throw(
+        DomainError(
+            groupsize,
+            "datasize must be positive and groupsize must to be within [2, datasize]",
+        ),
+    )
+    return [i:min(datasize, i + groupsize - 1) for i in 1:groupsize-1:datasize-1]
+end
 
 """
     AIC(RSS, k, m)

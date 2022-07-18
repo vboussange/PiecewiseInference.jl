@@ -14,10 +14,11 @@ end
 """
 $(SIGNATURES)
 
-Maximum likelihood estimation with minibatching. Loops through ADAM and BFGS.
+Inference with minibatching. Loops through the optimizers `optimizers`.
 Returns `minloss, p_trained, ranges, losses, θs`.
 
 # arguments
+- opt : array of optimizers
 - p_init : initial guess for parameters of `prob`
 - group_size : size of segments
 - data_set : data
@@ -33,8 +34,8 @@ Returns `minloss, p_trained, ranges, losses, θs`.
     `h` that maps the state variables to the observables. By default, `h` is taken as the identity.
 - `u0_init` : if not provided, we initialise from `data_set`
 - `loss_fn` : loss function with arguments `loss_fn(data, pred, ic_term)`
-- `λ` : dictionary with learning rates. `Dict("ADAM" => 0.01, "BFGS" => 0.01)`
-- `epochs` : dictionary with maximum iterations. Dict("ADAM" => 2000, "BFGS" => 1000),
+- `optimizers` : array of optimizers, e.g. `[Adam(0.01)]`
+- `epochs` : number of epochs, which length should match with `optimizers`
 - `continuity_term` : weight on continuity conditions
 - `ic_term` : weight on initial conditions
 - `verbose` : displaying loss
@@ -63,6 +64,7 @@ of the corresponding time series.
 function minibatch_ML_indep_TS(;group_size::Int,
                                 data_set::Vector, #many different initial conditions
                                 tsteps::Vector, #corresponding time steps
+                                save_pred = true, # saving prediction
                                 kwargs...)
     @assert length(tsteps) == length(data_set) "Independent time series must be gathered as a Vector"
 
@@ -88,7 +90,7 @@ function minibatch_ML_indep_TS(;group_size::Int,
         
     # reconstructing the problem with original format
     ranges_arr = [_get_ranges(group_size, datasize_arr[i]) for i in 1:length(data_set)]
-    if kwargs[:save_pred]
+    if save_pred
         # group back the time series in vector, to have
         # pred = [ [mibibatch_1_ts_1, mibibatch_2_ts_1...],  [mibibatch_1_ts_2, mibibatch_2_ts_2...] ...]
         pred_arr = [Array{eltype(data_set[1])}[] for _ in 1:length(data_set)]
@@ -211,12 +213,15 @@ function _minibatch_MLE(;p_init,
 
 
     println("***************\nTraining started\n***************")
+    objectivefun = OptimizationFunction((x,p) -> _loss(x), Optimization.AutoForwardDiff())
     opt = first(optimizers)
+
     println("Running optimizer $(typeof(opt))")
-    res = DiffEqFlux.sciml_train(_loss, θ, opt, cb=callback, maxiters = first(epochs))
+    optprob = Optimization.OptimizationProblem(objectivefun, θ)
+    res = Optimization.solve(optprob, opt, callback=callback, maxiters = first(epochs))
     for(i, opt) in enumerate(optimizers[2:end])
         println("Running optimizer $(typeof(opt))")
-        res =  DiffEqFlux.sciml_train(_loss, res.minimizer, opt, cb=callback, maxiters = epochs[i+1])
+        res = Optimization.solve(remake(optprob, u0=res.minimizer), opt, callback=callback, maxiters = first(epochs))
     end
     minloss, pred = _loss(res.minimizer)
     p_trained = res.minimizer[dim_prob * nb_group + 1 : end]
@@ -232,7 +237,7 @@ end
 
 function _get_ranges(group_size, datasize)
     if group_size-1 < datasize
-        ranges = DiffEqFlux.group_ranges(datasize, group_size)
+        ranges = group_ranges(datasize, group_size)
         # minibatching
     else
         ranges = [1:datasize]

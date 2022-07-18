@@ -14,7 +14,7 @@ u0 = ones(2)
 prob = ODEProblem(dudt, u0, tspan, p_true)
 sol_data = solve(prob, Tsit5(), saveat = tsteps, sensealg = ForwardDiffSensitivity())
 ode_data = Array(sol_data)
-optimizers = [ADAM(0.001)]
+optimizers = [Adam(0.001)]
 epochs = [10]
 
 @testset "`ResultMLE`` from `minibatch_ML`" begin
