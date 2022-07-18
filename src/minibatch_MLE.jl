@@ -174,7 +174,8 @@ function _minibatch_MLE(;p_init,
     nb_group = length(ranges)
     println("minibatch_MLE with $(length(tsteps)) points and $nb_group groups.")
 
-    callback(θ, l, pred) = begin
+    # Here we need a default behavior for Optimization.jl (see https://github.com/SciML/Optimization.jl/blob/c0a51120c7c54a89d091b599df30eb40c4c0952b/lib/OptimizationFlux/src/OptimizationFlux.jl#L53)
+    callback(θ, l, pred=[]) = begin
         push!(losses, l)
         p_trained = @view θ[nb_group * dim_prob + 1: end]
         isnothing(p_true) ? nothing : push!(θs, sum((p_trained .- p_true).^2))
@@ -220,8 +221,8 @@ function _minibatch_MLE(;p_init,
     optprob = Optimization.OptimizationProblem(objectivefun, θ)
     res = Optimization.solve(optprob, opt, callback=callback, maxiters = first(epochs))
     for(i, opt) in enumerate(optimizers[2:end])
-        println("Running optimizer $(typeof(opt))")
-        res = Optimization.solve(remake(optprob, u0=res.minimizer), opt, callback=callback, maxiters = first(epochs))
+        @info "Running optimizer $(typeof(opt))"
+        res = Optimization.solve(remake(optprob, u0=res.minimizer), opt, callback=callback, maxiters = epochs[i+1])
     end
     minloss, pred = _loss(res.minimizer)
     p_trained = res.minimizer[dim_prob * nb_group + 1 : end]
