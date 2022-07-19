@@ -64,12 +64,14 @@ end
 $(SIGNATURES)
 
 Computes the loglikelihood of `res` given the observational noise variance covariance matrix Σ.
+
 # Options
 By default, normal observational noise is assumed, 
 but lognormal observational noise can be chosen by setting
 `distrib=MvLogNormal, fn=log`
 """
 function loglikelihood(res::ResultMLE, data_set::Array, Σ::Array; distrib=MvNormal, fn=identity)
+    isempty(res.pred) ? error("`res.pred` should not be empty, use `minibatch_MLE` with `save_pred = true`") : nothing
     if typeof(res.pred) <: Vector{Vector{Array{T}}} where T
         dim_prob = size(data_set[1],1)
         nb_ts = length(res.ranges)

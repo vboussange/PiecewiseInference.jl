@@ -5,7 +5,7 @@ $(SIGNATURES)
 
 default loss function for `minibatch_MLE`.
 """
-function _loss_multiple_shoot_init(data, pred, ic_term)
+function _loss_multiple_shoot_init(data, pred, rg, ic_term)
     l =  mean((data - pred).^2)
     l +=  mean((data[:,1] - pred[:,1]).^2) * ic_term # putting more weights on initial conditions
     return l
@@ -28,8 +28,9 @@ Returns `minloss, p_trained, ranges, losses, θs`.
 - sensealg : sensitivity solver
 
 # optional
-- `loss_fn` : the loss function, that takes as arguments `loss_fn(data, pred, ic_term)` where 
-    `data` is the training data and `pred` corresponds to the predicted state variables. 
+- `loss_fn` : the loss function, that takes as arguments `loss_fn(data, pred, rg, ic_term)` where 
+    `data` is the training data, `pred` corresponds to the predicted state variables, `rg` corresponds
+    to the range of the minibatch wrt the initial data, and `ic_term` is a weight on the initial conditions. 
     `loss_fn` must transform the pred into the observables, with a function 
     `h` that maps the state variables to the observables. By default, `h` is taken as the identity.
 - `u0_init` : if not provided, we initialise from `data_set`
@@ -135,7 +136,7 @@ function _minibatch_MLE(;p_init,
                             data_set, 
                             tsteps, 
                             prob, 
-                            (data, pred) -> loss_fn(data, pred, ic_term),
+                            (data, pred, rg) -> loss_fn(data, pred, rg, ic_term),
                             alg, 
                             ranges, 
                             continuity_term = continuity_term, 
@@ -151,7 +152,7 @@ function _minibatch_MLE(;p_init,
         sol = solve(prob_i, alg; saveat = tsteps, sensealg = sensealg, kwargshandle=KeywordArgError, kwargs...)
         sol.retcode == :Success && sol.retcode !== :Terminated ? nothing : return Inf, []
         pred = sol |> Array
-        l = loss_fn(data_set, pred, ic_term)
+        l = loss_fn(data_set, pred, rg, ic_term)
         return l, [pred]
     end
 
@@ -227,6 +228,20 @@ function _minibatch_MLE(;p_init,
     minloss, pred = _loss(res.minimizer)
     p_trained = res.minimizer[dim_prob * nb_group + 1 : end]
     @info "Minimum loss: $minloss"
+    if !isnothing(cb)
+        cb(θs, p_trained, losses, pred, ranges)
+    end
+    if plotting
+        plot_convergence(losses, 
+                        pred, 
+                        data_set, 
+                        ranges, 
+                        tsteps, 
+                        p_true = p_true, 
+                        p_labs = p_labs, 
+                        θs = θs, 
+                        p_trained = p_trained)
+    end
     
     if save_pred
         res = ResultMLE(minloss, p_trained, p_true, p_labs, pred, ranges, losses, θs)
