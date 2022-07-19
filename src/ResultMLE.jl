@@ -70,37 +70,27 @@ By default, normal observational noise is assumed,
 but lognormal observational noise can be chosen by setting
 `distrib=MvLogNormal, fn=log`
 """
-function loglikelihood(res::ResultMLE, data_set::Array, Σ::Array; distrib=MvNormal, fn=identity)
+function loglikelihood(res::ResultMLE, data_set::Array, Σ::Array; kwargs...) 
     isempty(res.pred) ? error("`res.pred` should not be empty, use `minibatch_MLE` with `save_pred = true`") : nothing
-    if typeof(res.pred) <: Vector{Vector{Array{T}}} where T
-        dim_prob = size(data_set[1],1)
-        nb_ts = length(res.ranges)
-        # looping over time series
-        logl = 0.
-        for k in 1:nb_ts
-            data_set_simu_vect_k = [res.pred[k][i][:,1:end-1] for i in 1:length(res.ranges[k])-1] # removing all duplicates shared by segments i, i-1, removing the last one
-            push!(data_set_simu_vect_k,res.pred[k][end])
-            pred_k = cat(data_set_simu_vect_k..., dims=2)
-            data_set_k = data_set[k]
-            logl += sum(logpdf(distrib(fn.(pred_k[:,i]), Σ), data_set_k[:,i]) for i in 1:length(pred_k) ) 
-        end
-    else
-        # version where we reomve the additional time point used for multiple shooting
-        # dim_prob = size(data_set,1)
-        # pred_vect = [res.pred[i][:,1:end-1] for i in 1:length(res.ranges)-1] # removing all duplicates shared by segments i, i-1, removing the last one
-        # push!(pred_vect,res.pred[end])
-        # pred = cat(pred_vect..., dims=2)
-        # ϵ = (data_set - pred)
-        # logl = sum(log(pdf(MvNormal(zeros(dim_prob), Σ), ϵ_i)) for ϵ_i in eachcol(ϵ) ) 
+    return loglikelihood(res.pred, res.ranges, data_set, Σ; kwargs...)
+end
 
-        # version where the additional time point is kept
-        dim_prob = size(data_set,1)
-        ϵ = cat( [res.pred[i] .- data_set[:,rng] for (i,rng) in enumerate(res.ranges)]..., dims=2)
-        logl = sum(logpdf(MvNormal(zeros(dim_prob), Σ), ϵ_i) for ϵ_i in eachcol(ϵ) ) 
+function loglikelihood(pred::Array, ranges::Vector, data_set::Array, Σ::Array; distrib=MvNormal, fn=identity)
+    if typeof(pred) <: Vector{Vector{Array{T}}} where T # for independent time series
+        error("Function to yet implemented from `ResultMLE` with Independent time series")
+    else
+        pred_all_batches = cat( [pred[i] for (i,rng) in enumerate(ranges)]..., dims=2)
+        data_all_batches = cat( [data_set[:,rng] for (i,rng) in enumerate(ranges)]..., dims=2)
+        logl = loglikelihood(pred_all_batches, data_all_batches, Σ; distrib, fn)
     end
     return logl
 end
 # see https://juliaeconomics.com/2014/06/16/numerical-maximum-likelihood-the-ols-example/
+
+
+function loglikelihood(pred_all_batches::Array, data_all_batches::Array, Σ::Array; distrib=MvNormal, fn=identity)
+    return sum(logpdf(distrib(fn.(pred_all_batches[:,i]), Σ), data_all_batches[:,i]) for i in size(pred_all_batches,2))
+end
 
 """
 $(SIGNATURES)

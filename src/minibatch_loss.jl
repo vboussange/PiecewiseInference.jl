@@ -37,7 +37,7 @@ function minibatch_loss(
     continuity_loss,
     solver::DiffEqBase.AbstractODEAlgorithm,
     ranges::AbstractArray;
-    continuity_term::Real=100,
+    continuity_term::Real=0,
     kwargs...
 )
     dim_prob = length(prob.u0)

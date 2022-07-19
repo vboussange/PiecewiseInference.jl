@@ -6,6 +6,7 @@ using Revise
 
 @testset "MiniBatchInference" begin
     # include("FIM.jl")
+    include("ResultMLE.jl")
     include("minibatch_loss.jl")
     include("minibatch_MLE.jl")
 end

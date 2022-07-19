@@ -152,7 +152,7 @@ function _minibatch_MLE(;p_init,
         sol = solve(prob_i, alg; saveat = tsteps, sensealg = sensealg, kwargshandle=KeywordArgError, kwargs...)
         sol.retcode == :Success && sol.retcode !== :Terminated ? nothing : return Inf, []
         pred = sol |> Array
-        l = loss_fn(data_set, pred, rg, ic_term)
+        l = loss_fn(data_set, pred, 1:size(data_set,2), ic_term)
         return l, [pred]
     end
 

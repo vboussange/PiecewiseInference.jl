@@ -15,7 +15,7 @@ prob = ODEProblem(dudt, u0, tspan, p_true)
 sol_data = solve(prob, Tsit5(), saveat = tsteps, sensealg = ForwardDiffSensitivity(), kwargshandle=KeywordArgError)
 ode_data = Array(sol_data)
 
-loss_function(data, pred) = sum(abs2, data - pred)
+loss_function(data, pred, rg) = sum(abs2, data - pred)
 
 # making sure we have good data
 # figure()
