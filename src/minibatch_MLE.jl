@@ -220,7 +220,7 @@ function _minibatch_MLE(;p_init,
         res = Optimization.solve(remake(optprob, u0=res.minimizer), opt, callback=callback, maxiters = epochs[i+1])
     end
     minloss, pred = _loss(res.minimizer)
-    p_trained = _get_param(res.minimizer, nb_group, dim_prob)
+    p_trained = _get_param(res.minimizer, nb_group, dim_prob) |> collect
     u0s_trained = _get_u0s(res.minimizer, nb_group, dim_prob)
 
     @info "Minimum loss: $minloss"

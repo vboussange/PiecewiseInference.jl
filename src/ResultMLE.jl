@@ -67,7 +67,7 @@ end
 # see https://juliaeconomics.com/2014/06/16/numerical-maximum-likelihood-the-ols-example/
 
 
-function loglikelihood_normal(pred_all_batches::Array, data_all_batches::Array, Σ::Array)
+function loglikelihood_normal(pred_all_batches::Array, data_all_batches::Array, Σ)
     return sum([logpdf(MvNormal(pred_all_batches[:,i], Σ), data_all_batches[:,i]) for i in 1:size(pred_all_batches,2)])
 end
 
