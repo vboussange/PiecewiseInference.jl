@@ -28,9 +28,9 @@ module MiniBatchInference
     end
 
     export ForwardDiffSensitivity # from DiffEqSensitivity
-    export ParamFun, ResultMLE, get_u0s
+    export ParamFun, ResultMLE
     export group_ranges, AIC, AICc, AICc_TREE, moments!, moments, FIM_strouwen, FIM_yazdani, divisors, loglikelihood, RSS
     export minibatch_loss
-    export minibatch_MLE, minibatch_ML_indep_TS, iterative_minibatch_MLE
+    export minibatch_MLE, minibatch_ML_indep_TS, iterative_minibatch_MLE, get_ranges
     export plot_convergence
 end # module

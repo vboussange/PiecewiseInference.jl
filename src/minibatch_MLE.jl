@@ -51,7 +51,7 @@ Returns `minloss, p_trained, ranges, losses, θs`.
 """
 function minibatch_MLE(;group_size::Int,  kwargs...)
     datasize = size(kwargs[:data_set],2)
-    _minibatch_MLE(;ranges=_get_ranges(group_size, datasize),  kwargs...)
+    _minibatch_MLE(;ranges=get_ranges(group_size, datasize),  kwargs...)
 end
 
 """
@@ -68,9 +68,10 @@ function minibatch_ML_indep_TS(;group_size::Int,
                                 save_pred = true, # saving prediction
                                 kwargs...)
     @assert length(tsteps) == length(data_set) "Independent time series must be gathered as a Vector"
+    @assert all(size(data_set[1],1) .== size.(data_set, 1)) "Independent time series must have same state variable dimension"
 
     datasize_arr = size.(data_set,2)
-    ranges_arr = [_get_ranges(group_size, datasize_arr[i]) for i in 1:length(data_set)]
+    ranges_arr = [get_ranges(group_size, datasize_arr[i]) for i in 1:length(data_set)]
     # updating to take into account the shift provoked by concatenating independent TS
     ranges_shift = cumsum(datasize_arr) # shift
     for i in 2:length(ranges_arr)
@@ -90,16 +91,30 @@ function minibatch_ML_indep_TS(;group_size::Int,
         # NOTE: we could have continuity within a time series, this must be carefully thought out.
         
     # reconstructing the problem with original format
-    ranges_arr = [_get_ranges(group_size, datasize_arr[i]) for i in 1:length(data_set)]
+    ranges_arr = [get_ranges(group_size, datasize_arr[i]) for i in 1:length(data_set)]
+    idx_res = [0;cumsum(length.(ranges_arr))]
+
+    # group u0s in vector of u0s, 
+    # [[u_0_TS1_1, ..., u_0_TS1_n],...,[u_0_TS1_1,...]]
+    u0s_trained_arr = [res.u0s_trained[idx_res[i]+1:idx_res[i+1]] for i in 1:length(data_set)]
+    
     if save_pred
         # group back the time series in vector, to have
         # pred = [ [mibibatch_1_ts_1, mibibatch_2_ts_1...],  [mibibatch_1_ts_2, mibibatch_2_ts_2...] ...]
-        pred_arr = [Array{eltype(data_set[1])}[] for _ in 1:length(data_set)]
-        idx_res = [0;cumsum(length.(ranges_arr))]
-        [pred_arr[i] = res.pred[idx_res[i]+1:idx_res[i+1]] for i in 1:length(data_set)]
-        res_arr = ResultMLE(res.minloss, res.p_trained, res.p_true, res.p_labs, pred_arr, ranges_arr, res.losses, res.θs)
+        pred_arr = [res.pred[idx_res[i]+1:idx_res[i+1]] for i in 1:length(data_set)]
+        res_arr = ResultMLE(res.minloss,
+                            res.p_trained,
+                            u0s_trained_arr, 
+                            pred_arr, 
+                            ranges_arr, 
+                            res.losses,)
     else
-        res_arr = ResultMLE(res.minloss, res.p_trained, res.p_true, res.p_labs, [], ranges_arr, res.losses, res.θs)
+        res_arr = ResultMLE(res.minloss,
+                            res.p_trained,
+                            u0s_trained_arr,
+                            [], 
+                            ranges_arr, 
+                            res.losses,)
     end
     return res_arr
 end
@@ -131,7 +146,7 @@ function _minibatch_MLE(;p_init,
     @assert length(optimizers) == length(epochs)
 
     # minibatch loss
-    function loss_mb(θ)
+    function _loss(θ)
         return minibatch_loss(θ, 
                             data_set, 
                             tsteps, 
@@ -144,33 +159,12 @@ function _minibatch_MLE(;p_init,
                             kwargs...)
     end
 
-    # normal loss
-    function loss_nm(θ)
-        params = @view θ[dim_prob + 1: end] # params of the problem
-        u0_i = abs.(θ[1:dim_prob])
-        prob_i = remake(prob; p=params, tspan=(tsteps[1], tsteps[end]), u0=u0_i)
-        sol = solve(prob_i, alg; saveat = tsteps, sensealg = sensealg, kwargshandle=KeywordArgError, kwargs...)
-        sol.retcode == :Success && sol.retcode !== :Terminated ? nothing : return Inf, []
-        pred = sol |> Array
-        l = loss_fn(data_set, pred, 1:size(data_set,2), ic_term)
-        return l, [pred]
-    end
-
-    if length(ranges) > 1
-        # minibatching
-        _loss = loss_mb
-    else
-        # normal MLE with initial estimation
-        _loss = loss_nm
-    end
-
     # initialising with data_set if not provided
     if isnothing(u0s_init) 
         @assert (size(data_set,1) == dim_prob) "The dimension of the training data does not correspond to the dimension of the state variables. This probably means that the training data corresponds to observables different from the state variables. In this case, you need to provide manually `u0s_init`." 
         u0s_init = reshape(data_set[:,first.(ranges),:],:)
     end
-    # making sure that u0s_init are positive, otherwise we might have some numerical difficulties
-    u0s_init[u0s_init .< 0.] .= 1e-3 # alternative formulation : `u0s_init = max.(u0s_init,1e-3)`
+
     θ = [u0s_init;p_init]
     nb_group = length(ranges)
     println("minibatch_MLE with $(length(tsteps)) points and $nb_group groups.")
@@ -178,7 +172,7 @@ function _minibatch_MLE(;p_init,
     # Here we need a default behavior for Optimization.jl (see https://github.com/SciML/Optimization.jl/blob/c0a51120c7c54a89d091b599df30eb40c4c0952b/lib/OptimizationFlux/src/OptimizationFlux.jl#L53)
     callback(θ, l, pred=[]) = begin
         push!(losses, l)
-        p_trained = @view θ[nb_group * dim_prob + 1: end]
+        p_trained = _get_param(θ,nb_group,dim_prob)
         isnothing(p_true) ? nothing : push!(θs, sum((p_trained .- p_true).^2))
         if length(losses)%info_per_its==0
             verbose ? println("Current loss after $(length(losses)) iterations: $(losses[end])") : nothing
@@ -226,7 +220,9 @@ function _minibatch_MLE(;p_init,
         res = Optimization.solve(remake(optprob, u0=res.minimizer), opt, callback=callback, maxiters = epochs[i+1])
     end
     minloss, pred = _loss(res.minimizer)
-    p_trained = res.minimizer[dim_prob * nb_group + 1 : end]
+    p_trained = _get_param(res.minimizer, nb_group, dim_prob)
+    u0s_trained = _get_u0s(res.minimizer, nb_group, dim_prob)
+
     @info "Minimum loss: $minloss"
     if !isnothing(cb)
         cb(θs, p_trained, losses, pred, ranges)
@@ -236,22 +232,33 @@ function _minibatch_MLE(;p_init,
                         pred, 
                         data_set, 
                         ranges, 
-                        tsteps, 
-                        p_true = p_true, 
-                        p_labs = p_labs, 
+                        tsteps,
                         θs = θs, 
                         p_trained = p_trained)
     end
     
     if save_pred
-        res = ResultMLE(minloss, p_trained, p_true, p_labs, pred, ranges, losses, θs)
+        res = ResultMLE(minloss, 
+                        p_trained,
+                        u0s_trained,
+                        pred, 
+                        ranges, 
+                        losses)
     else
-        res = ResultMLE(minloss, p_trained, p_true, p_labs, [], ranges, losses, θs)
+        res = ResultMLE(minloss,
+                        p_trained,
+                        u0s_trained, 
+                        [], 
+                        ranges, 
+                        losses,)
     end
     return res
 end
 
-function _get_ranges(group_size, datasize)
+"""
+$(SIGNATURES)
+"""
+function get_ranges(group_size, datasize)
     if group_size-1 < datasize
         ranges = group_ranges(datasize, group_size)
         # minibatching
@@ -290,11 +297,11 @@ function iterative_minibatch_MLE(;group_sizes,
     # initialising results
     data_set = kwargs[:data_set]
     datasize = size(data_set,2)
-    res = ResultMLE(Inf, [], [], [], [data_set], [1:datasize], [], [])
+    res = ResultMLE(pred = [data_set], ranges = [1:datasize])
     res_array = ResultMLE[]
     for (i,gs) in enumerate(group_sizes)
         println("***************\nIterative training with group size $gs\n***************")
-        ranges = _get_ranges(group_sizes[i], datasize)
+        ranges = get_ranges(group_sizes[i], datasize)
         u0s_init = _initialise_u0s_iterative_minibatch_ML(res.pred,res.ranges,ranges)
         tempres = _minibatch_MLE(;ranges = ranges, 
                                 optimizers = optimizers_array[i],

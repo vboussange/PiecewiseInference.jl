@@ -28,13 +28,13 @@ epochs = [10]
                         epochs = epochs, 
                         optimizers = optimizers,
                         )
-    u0s_init = get_u0s(res)[1]
+    u0s_init = res.u0s_trained[1]
     @test length(u0s_init) == length(u0)
 
     @test (AIC(res, ode_data, diagm(ones(length(p_init)))) isa Number)
 end
 
-@testset "get_u0s for `ResultMLE`` from `minibatch_ML_indep_TS`" begin
+@testset "u0s for `ResultMLE`` from `minibatch_ML_indep_TS`" begin
     tsteps_arr = [tsteps[1:30],tsteps[31:60],tsteps[61:90]] # 3 ≠ time steps with ≠ length
 
     u0s = [rand(2) .+ 1, rand(2) .+ 1, rand(2) .+ 1]
@@ -57,7 +57,7 @@ end
                         epochs = epochs, 
                         optimizers = optimizers,
                         )
-    u0s_init = get_u0s(res)[1][1]
+    u0s_init = res.u0s_trained[1][1]
     @test length(u0s_init) == length(u0)
 
     #TODO: to implement

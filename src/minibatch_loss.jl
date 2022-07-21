@@ -11,7 +11,7 @@ The initial conditions are assumed free parameters for each segments.
   - `ode_data`: Original Data to be modelled.
   - `tsteps`: Timesteps on which ode_data was calculated.
   - `prob`: ODE problem that the Neural Network attempts to solve.
-  - `loss_function`: Any arbitrary function to calculate loss.
+  - `loss_function`: A function to calculate loss, of the form `loss_function(u, û, rg)`
   - `continuity_loss`: Function that takes states ``\\hat{u}_{end}`` of group ``k`` and
   ``u_{0}`` of group ``k+1`` as input and calculates prediction continuity loss
   between them.
@@ -44,13 +44,14 @@ function minibatch_loss(
     nb_group = length(ranges)
     @assert length(θ) > nb_group * dim_prob "`params` should contain [u0;p]"
 
-    params = @view θ[nb_group * dim_prob + 1: end] # params of the problem
+    params = _get_param(θ, nb_group, dim_prob) # params of the problem
+    u0s = _get_u0s(θ, nb_group, dim_prob)
 
     # Calculate multiple shooting loss
     loss = zero(eltype(θ))
     group_predictions = Vector{Array{eltype(θ)}}(undef, length(ranges))
     for (i, rg) in enumerate(ranges)
-        u0_i = abs.(θ[dim_prob*(i-1)+1:dim_prob*i]) # taking absolute value, assuming populations cannot be negative
+        u0_i = u0s[i] # taking absolute value, assuming populations cannot be negative
         prob_i = remake(prob; p=params, tspan=(tsteps[first(rg)], tsteps[last(rg)]), u0=u0_i,)
         u = ode_data[:, rg]
         sol = solve(prob_i, solver; saveat=tsteps[rg], kwargshandle=KeywordArgError, kwargs...)
@@ -101,5 +102,14 @@ end
 # and current initial condition in ode_data
 function _default_continuity_loss(û_end::AbstractArray,
     u_0::AbstractArray)
-    return  mean((û_end - u_0).^2)
+    return mean((û_end - u_0).^2)
+end
+
+function _get_param(θ, nb_group, dim_prob)
+    return @view θ[nb_group * dim_prob + 1: end]
+end
+
+function _get_u0s(θ, nb_group, dim_prob)
+    # @show nb_group, dim_prob
+    return [abs.(θ[dim_prob*(i-1)+1:dim_prob*i]) for i in 1:nb_group]
 end
