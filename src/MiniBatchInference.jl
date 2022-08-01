@@ -1,5 +1,7 @@
 __precompile__(false)
-
+"""
+$(DocStringExtensions.README)
+"""
 module MiniBatchInference
     using OrdinaryDiffEq
     using Optimization

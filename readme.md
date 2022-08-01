@@ -17,3 +17,6 @@ This will download the latest version from the git repo and download all depende
 
 ## Getting started
 See the documentation and the `test` folder for up-to-date examples.
+
+## Reference
+- Boussange, V., Vilimelis-Aceituno, P., Pellissier, L., _Mini-batching ecological data to improve ecosystem models with machine learning_ [[bioRxiv](https://www.biorxiv.org/content/10.1101/2022.07.25.501365v1)] (2022), 46 pages.
