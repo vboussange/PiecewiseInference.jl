@@ -11,9 +11,9 @@ The initial conditions are assumed free parameters for each segments.
   - `ode_data`: Original Data to be modelled.
   - `tsteps`: Timesteps on which ode_data was calculated.
   - `prob`: ODE problem that the Neural Network attempts to solve.
-  - `loss_function`: A function to calculate loss, of the form `loss_function(u, û, rg)`
-  - `continuity_loss`: Function that takes states ``\\hat{u}_{end}`` of group ``k`` and
-  ``u_{0}`` of group ``k+1`` as input and calculates prediction continuity loss
+  - `loss_function`: A function to calculate loss, of the form `loss_function(data, params, pred, rg)`
+  - `continuity_loss`: Function that takes states ``pred[:,ranges[k][end]]`` and
+  ``data[:,ranges[k+1][1]]}`` as input and calculates prediction continuity loss
   between them.
   If no custom `continuity_loss` is specified, `sum(abs, û_end - u_0)` is used.
   - `solver`: ODE Solver algorithm.
@@ -53,21 +53,21 @@ function minibatch_loss(
     for (i, rg) in enumerate(ranges)
         u0_i = u0s[i] # taking absolute value, assuming populations cannot be negative
         prob_i = remake(prob; p=params, tspan=(tsteps[first(rg)], tsteps[last(rg)]), u0=u0_i,)
-        u = ode_data[:, rg]
+        data = ode_data[:, rg]
         sol = solve(prob_i, solver; saveat=tsteps[rg], kwargshandle=KeywordArgError, kwargs...)
 
         # Abort and return infinite loss if one of the integrations failed
         sol.retcode == :Success && sol.retcode !== :Terminated ? nothing : return Inf, group_predictions
 
-        û = sol |> Array
-        loss += loss_function(u, û, rg)
-        group_predictions[i] = û
+        pred = sol |> Array
+        loss += loss_function(data, params, pred, rg)
+        group_predictions[i] = pred
 
         if i < nb_group && continuity_term > 0.
             # Ensure continuity between last state in previous prediction
             # and current initial condition in ode_data
             loss +=
-                continuity_term * continuity_loss(û[:, end], ode_data[:, first(ranges[i+1])])
+                continuity_term * continuity_loss(pred[:, end], ode_data[:, first(ranges[i+1])])
         end
     end
 

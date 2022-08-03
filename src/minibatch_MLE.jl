@@ -5,7 +5,7 @@ $(SIGNATURES)
 
 default loss function for `minibatch_MLE`.
 """
-function _loss_multiple_shoot_init(data, pred, rg, ic_term)
+function _loss_multiple_shoot_init(data, params, pred, rg, ic_term)
     l =  mean((data - pred).^2)
     l +=  mean((data[:,1] - pred[:,1]).^2) * ic_term # putting more weights on initial conditions
     return l
@@ -28,13 +28,13 @@ Returns `minloss, p_trained, ranges, losses, θs`.
 - sensealg : sensitivity solver
 
 # optional
-- `loss_fn` : the loss function, that takes as arguments `loss_fn(data, pred, rg, ic_term)` where 
-    `data` is the training data, `pred` corresponds to the predicted state variables, `rg` corresponds
+- `loss_fn` : the loss function, that takes as arguments `loss_fn(data, params, pred, rg, ic_term)` where 
+    `data` is the training data, `params` is the parameter of the model (for defining priors)
+    pred` corresponds to the predicted state variables, `rg` corresponds
     to the range of the minibatch wrt the initial data, and `ic_term` is a weight on the initial conditions. 
     `loss_fn` must transform the pred into the observables, with a function 
     `h` that maps the state variables to the observables. By default, `h` is taken as the identity.
 - `u0_init` : if not provided, we initialise from `data_set`
-- `loss_fn` : loss function with arguments `loss_fn(data, pred, ic_term)`
 - `optimizers` : array of optimizers, e.g. `[Adam(0.01)]`
 - `epochs` : number of epochs, which length should match with `optimizers`
 - `continuity_term` : weight on continuity conditions
@@ -151,7 +151,7 @@ function _minibatch_MLE(;p_init,
                             data_set, 
                             tsteps, 
                             prob, 
-                            (data, pred, rg) -> loss_fn(data, pred, rg, ic_term),
+                            (data, params, pred, rg) -> loss_fn(data, params, pred, rg, ic_term),
                             alg, 
                             ranges, 
                             continuity_term = continuity_term, 
