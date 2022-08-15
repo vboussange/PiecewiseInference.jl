@@ -39,7 +39,7 @@ Returns `minloss, p_trained, ranges, losses, θs`.
 - `epochs` : number of epochs, which length should match with `optimizers`
 - `continuity_term` : weight on continuity conditions
 - `ic_term` : weight on initial conditions
-- `verbose` : displaying loss
+- `verbose_loss` : displaying loss
 - `info_per_its` = 50,
 - `plotting` : plotting convergence loss
 - `info_per_its` = 50,
@@ -132,7 +132,7 @@ function _minibatch_MLE(;p_init,
                         epochs = [1000, 200],
                         continuity_term = 1.,
                         ic_term = 1.,
-                        verbose = true,
+                        verbose_loss = true,
                         plotting = false,
                         info_per_its=50,
                         cb = nothing,
@@ -175,7 +175,7 @@ function _minibatch_MLE(;p_init,
         p_trained = _get_param(θ,nb_group,dim_prob)
         isnothing(p_true) ? nothing : push!(θs, sum((p_trained .- p_true).^2))
         if length(losses)%info_per_its==0
-            verbose ? println("Current loss after $(length(losses)) iterations: $(losses[end])") : nothing
+            verbose_loss ? println("Current loss after $(length(losses)) iterations: $(losses[end])") : nothing
             if !isnothing(cb)
                 cb(θs, p_trained, losses, pred, ranges)
             end
