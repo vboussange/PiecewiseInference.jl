@@ -3,6 +3,7 @@ __precompile__(false)
 $(DocStringExtensions.README)
 """
 module MiniBatchInference
+    using ParametricModels
     using OrdinaryDiffEq
     using Optimization
     using Requires

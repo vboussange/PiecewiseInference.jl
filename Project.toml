@@ -1,7 +1,7 @@
 name = "MiniBatchInference"
 uuid = "27a201f4-b6a1-4745-b96e-0c27845dca54"
 authors = ["Victor <bvictor@ethz.ch>"]
-version = "0.3.3"
+version = "0.4.0"
 
 [deps]
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
