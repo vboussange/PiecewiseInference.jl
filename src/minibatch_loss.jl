@@ -47,12 +47,12 @@ function minibatch_loss(
     for (i, rg) in enumerate(ranges)
         u0_i = u0s[i] # taking absolute value, assuming populations cannot be negative
         data = ode_data[:, rg]
-        sol = simulate(model,
-                        u0_i,
-                        (tsteps[first(rg)], tsteps[last(rg)]), 
-                        params, 
-                        saveat=tsteps[rg], 
-                        kwargshandle=KeywordArgError, kwargs...)
+        sol = simulate(model;
+                        u0 = u0_i,
+                        tspan = (tsteps[first(rg)], tsteps[last(rg)]), 
+                        p = params, 
+                        saveat = tsteps[rg], 
+                        kwargshandle = KeywordArgError)
         # Abort and return infinite loss if one of the integrations failed
         sol.retcode == :Success && sol.retcode !== :Terminated ? nothing : return Inf, group_predictions
 

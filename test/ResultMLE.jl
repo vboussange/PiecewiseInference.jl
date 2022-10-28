@@ -26,7 +26,7 @@ mp = ModelParams(p_true,
                 saveat = tsteps, 
                 )
 model = MyModel(mp)
-sol_data = simulate(model,)
+sol_data = simulate(model)
 ode_data = Array(sol_data)
 optimizers = [Adam(0.001)]
 epochs = [10]
@@ -43,7 +43,7 @@ epochs = [10]
     u0s_init = res.u0s_trained[1]
     @test length(u0s_init) == length(u0)
 
-    @test (AIC(res, ode_data, diagm(ones(length(p_init)))) isa Number)
+    @test (AIC(res, ode_data, diagm(ones(length(u0)))) isa Number)
 end
 
 @testset "u0s for `ResultMLE`` from `minibatch_ML_indep_TS`" begin
@@ -52,8 +52,7 @@ end
     u0s = [rand(2) .+ 1, rand(2) .+ 1, rand(2) .+ 1]
     ode_datas = []
     for (i,u0) in enumerate(u0s) # generating independent time series
-        prob = ODEProblem(dudt, u0, tspan, p_true)
-        sol_data = solve(prob, Tsit5(), saveat = tsteps_arr[i], sensealg = ForwardDiffSensitivity())
+        sol_data = simulate(model; u0, p_true, saveat = tsteps_arr[i], sensealg = ForwardDiffSensitivity())
         ode_data = Array(sol_data) 
         ode_data .+=  randn(size(ode_data)) .* 0.1
         push!(ode_datas, ode_data)
@@ -63,9 +62,7 @@ end
                         group_size = 31, 
                         tsteps = tsteps_arr, 
                         p_init = p_init, 
-                        prob = prob, 
-                        alg = Tsit5(), 
-                        sensealg =  ForwardDiffSensitivity(),
+                        model = model, 
                         epochs = epochs, 
                         optimizers = optimizers,
                         )
