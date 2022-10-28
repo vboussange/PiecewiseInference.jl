@@ -1,3 +1,5 @@
+using ForwardDiff
+@model dudt
 function dudt(du, u, p, t)
     du .=  0.1 .* u .* ( 1. .- p .* u) 
 end
@@ -7,12 +9,19 @@ tspan = (tsteps[1], tsteps[end])
 datasize = length(tsteps)
 ranges = [1:101, 101:datasize]
 
-p_true = [0.23, 0.5]
-p_init= [1., 2.]
+p_true = (b = [0.23, 0.5],)
+p_init= (b = [1., 2.],)
 
 u0 = ones(2)
-prob = ODEProblem(dudt, u0, tspan, p_true)
-sol_data = solve(prob, Tsit5(), saveat = tsteps, sensealg = ForwardDiffSensitivity(), kwargshandle=KeywordArgError)
+mp = ModelParams(p_true, 
+                tspan,
+                u0, 
+                BS3(),
+                sensealg = ForwardDiffSensitivity();
+                saveat = tsteps, 
+                )
+model = MyModel(mp)
+sol_data = simulate(model)
 ode_data = Array(sol_data)
 
 loss_function(data, params, pred, rg) = sum(abs2, data - pred)
@@ -21,15 +30,14 @@ loss_function(data, params, pred, rg) = sum(abs2, data - pred)
 # figure()
 # plot(tsteps, sol_data')
 # gcf()
-θ = [ode_data[:,first.(ranges),:][:];p_init]
+θ = [ode_data[:,first.(ranges),:][:];p_init[:b]]
  
 @testset "Testing correct behavior `minibatch_loss`" begin
     l, pred = minibatch_loss(θ, 
                         ode_data, 
                         tsteps, 
-                        prob, 
+                        model, 
                         loss_function, 
-                        Tsit5(), 
                         ranges, 
                         sensealg = ForwardDiffSensitivity())
     @test isa(l, Number)
@@ -40,9 +48,8 @@ end
     _loss(θ) = minibatch_loss(θ, 
                         ode_data, 
                         tsteps, 
-                        prob, 
+                        model, 
                         loss_function, 
-                        Tsit5(), 
                         ranges, 
                         sensealg = ForwardDiffSensitivity())[1]
     l = _loss(θ)
