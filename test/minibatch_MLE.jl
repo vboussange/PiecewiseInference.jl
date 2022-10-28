@@ -1,17 +1,32 @@
-@model dudt
-function dudt(du, u, p, t)
-    du .=  0.1 .* u .* ( 1. .- p .* u) 
+using LinearAlgebra, ParametricModels, OrdinaryDiffEq, DiffEqSensitivity
+using Bijectors: Exp, inverse, Identity, Stacked
+using UnPack
+using OptimizationOptimisers
+using Test
+using MiniBatchInference
+
+@model MyModel
+function (m::MyModel)(du, u, p, t)
+    @unpack b = p
+    du .=  0.1 .* u .* ( 1. .- b .* u) 
 end
 
 tsteps = 1.:0.5:100.5
 tspan = (tsteps[1], tsteps[end])
 
-p_true = [0.23, 0.5]
-p_init= [1., 2.]
+p_true = (b = [0.23, 0.5],)
+p_init= (b = [1., 2.],)
 
 u0 = ones(2)
-prob = ODEProblem(dudt, u0, tspan, p_true)
-sol_data = solve(prob, Tsit5(), saveat = tsteps, sensealg = ForwardDiffSensitivity())
+mp = ModelParams(p_true, 
+                tspan,
+                u0, 
+                BS3(),
+                sensealg = ForwardDiffSensitivity();
+                saveat = tsteps, 
+                )
+model = MyModel(mp)
+sol_data = simulate(model)
 ode_data = Array(sol_data)
 optimizers = [Adam(0.001)]
 epochs = [5000]
@@ -20,14 +35,12 @@ epochs = [5000]
     res = minibatch_MLE(p_init = p_init, 
                         group_size = 101, 
                         data_set = ode_data, 
-                        prob = prob, 
+                        model = model, 
                         tsteps = tsteps, 
-                        alg = Tsit5(), 
-                        sensealg =  ForwardDiffSensitivity(),
                         epochs = epochs, 
                         optimizers = optimizers,
                         )
-    @test all(isapprox.(res.p_trained, p_true, atol = 1e-4 ))
+    @test all(isapprox.(res.p_trained, p_true[:b], atol = 1e-4 ))
 end
 
 
@@ -36,13 +49,11 @@ end
     res = minibatch_MLE(p_init = p_init, 
                         group_size = size(ode_data,2) + 1, 
                         data_set = ode_data_wnoise, 
-                        prob = prob, 
+                        model = model, 
                         tsteps = tsteps, 
-                        alg = Tsit5(), 
-                        sensealg = ForwardDiffSensitivity(),
                         optimizers = optimizers,
                         epochs = epochs)
-    @test all( isapprox.(res.p_trained, p_true, rtol = 1e-1))
+    @test all( isapprox.(res.p_trained, p_true[:b], rtol = 1e-1))
 end
 
 @testset "minibatch MLE independent TS" begin
@@ -51,8 +62,7 @@ end
     u0s = [rand(2) .+ 1, rand(2) .+ 1, rand(2) .+ 1]
     ode_datas = []
     for (i,u0) in enumerate(u0s) # generating independent time series
-        prob = ODEProblem(dudt, u0, tspan, p_true)
-        sol_data = solve(prob, Tsit5(), saveat = tsteps_arr[i], sensealg = ForwardDiffSensitivity())
+        sol_data = simulate(model; u0, saveat = tsteps_arr[i], sensealg = ForwardDiffSensitivity())
         ode_data = Array(sol_data) 
         ode_data .+=  randn(size(ode_data)) .* 0.1
         push!(ode_datas, ode_data)
@@ -65,13 +75,11 @@ end
                         group_size = 31, 
                         tsteps = tsteps_arr, 
                         p_init = p_init, 
-                        prob = prob, 
-                        alg = Tsit5(), 
-                        sensealg =  ForwardDiffSensitivity(),
+                        model = model, 
                         epochs = epochs, 
                         optimizers = optimizers,
                         )
-    @test all(isapprox.(res.p_trained, p_true, rtol = 1e-1 ))
+    @test all(isapprox.(res.p_trained, p_true[:b], rtol = 1e-1 ))
 end
 
 @testset "Initialisation iterative minibatch ML" begin
@@ -97,13 +105,11 @@ end
     optimizers_array = [[Adam(0.001)] for _ in 1:length(group_sizes)]
     epochs = [5000]
     res_array = iterative_minibatch_MLE(group_sizes = group_sizes, 
-                                                optimizers_array = optimizers_array,
-                                                epochs = epochs,
-                                                p_init = p_init,  
-                                                data_set = ode_data_wnoise, 
-                                                prob = prob, 
-                                                tsteps = tsteps, 
-                                                alg = Tsit5(), 
-                                                sensealg =  ForwardDiffSensitivity(),)
-    @test all( isapprox.(res_array[end].p_trained, p_true, rtol = 1e-1 ))
+                                        optimizers_array = optimizers_array,
+                                        epochs = epochs,
+                                        p_init = p_init,  
+                                        data_set = ode_data_wnoise, 
+                                        model = model, 
+                                        tsteps = tsteps,)
+    @test all( isapprox.(res_array[end].p_trained, p_true[:b], rtol = 1e-1 ))
 end
