@@ -52,7 +52,7 @@ end
     u0s = [rand(2) .+ 1, rand(2) .+ 1, rand(2) .+ 1]
     ode_datas = []
     for (i,u0) in enumerate(u0s) # generating independent time series
-        sol_data = simulate(model; u0, p_true, saveat = tsteps_arr[i], sensealg = ForwardDiffSensitivity())
+        sol_data = simulate(model; u0, saveat = tsteps_arr[i], sensealg = ForwardDiffSensitivity())
         ode_data = Array(sol_data) 
         ode_data .+=  randn(size(ode_data)) .* 0.1
         push!(ode_datas, ode_data)
