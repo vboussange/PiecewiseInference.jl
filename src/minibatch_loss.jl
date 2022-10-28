@@ -34,7 +34,7 @@ function minibatch_loss(
     continuity_term::Real=0,
     kwargs...
 )
-    dim_prob = length(prob.u0)
+    dim_prob = get_dims(model)
     nb_group = length(ranges)
     @assert length(θ) > nb_group * dim_prob "`params` should contain [u0;p]"
 
@@ -75,7 +75,7 @@ function minibatch_loss(
     θ::AbstractArray,
     ode_data::AbstractArray,
     tsteps::AbstractArray,
-    prob::ODEProblem,
+    model::AbstractModel,
     loss_function::Function,
     ranges::AbstractArray;
     kwargs...,
@@ -85,7 +85,7 @@ function minibatch_loss(
             θ,
             ode_data,
             tsteps,
-            prob,
+            model,
             loss_function,
             _default_continuity_loss,
             ranges::AbstractArray;

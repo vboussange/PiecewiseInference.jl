@@ -22,7 +22,7 @@ Returns `minloss, p_trained, ranges, losses, θs`.
 - p_init : initial guess for parameters of `model`
 - group_size : size of segments
 - data_set : data
-- prob : ODE problem for the state variables.
+- model : ODE problem for the state variables.
 - tsteps : corresponding to data
 
 # optional
@@ -140,6 +140,7 @@ function _minibatch_MLE(;p_init,
                         )
     dim_prob = get_dims(model) #used by loss_nm
     @assert length(optimizers) == length(epochs)
+    p_init, _ = Optimisers.destructure(p_init)
 
     # minibatch loss
     function _loss(θ)

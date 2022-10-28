@@ -1,18 +1,32 @@
-using LinearAlgebra, ParametricModels
-@model dudt
-function dudt(du, u, p, t)
-    du .=  0.1 .* u .* ( 1. .- p .* u) 
+using LinearAlgebra, ParametricModels, OrdinaryDiffEq, DiffEqSensitivity
+using Bijectors: Exp, inverse, Identity, Stacked
+using UnPack
+using OptimizationOptimisers
+using Test
+using MiniBatchInference
+
+@model MyModel
+function (m::MyModel)(du, u, p, t)
+    @unpack b = p
+    du .=  0.1 .* u .* ( 1. .- b .* u) 
 end
 
 tsteps = 1.:0.5:100.5
 tspan = (tsteps[1], tsteps[end])
 
-p_true = [0.23, 0.5]
-p_init= [1., 2.]
+p_true = (b = [0.23, 0.5],)
+p_init= (b = [1., 2.],)
 
 u0 = ones(2)
-prob = ODEProblem(dudt, u0, tspan, p_true)
-sol_data = solve(prob, Tsit5(), saveat = tsteps, sensealg = ForwardDiffSensitivity())
+mp = ModelParams(p_true, 
+                tspan,
+                u0, 
+                BS3(),
+                sensealg = ForwardDiffSensitivity();
+                saveat = tsteps, 
+                )
+model = MyModel(mp)
+sol_data = simulate(model,)
 ode_data = Array(sol_data)
 optimizers = [Adam(0.001)]
 epochs = [10]
@@ -21,10 +35,8 @@ epochs = [10]
     res = minibatch_MLE(p_init = p_init, 
                         group_size = 101, 
                         data_set = ode_data, 
-                        prob = prob, 
+                        model = model, 
                         tsteps = tsteps, 
-                        alg = Tsit5(), 
-                        sensealg =  ForwardDiffSensitivity(),
                         epochs = epochs, 
                         optimizers = optimizers,
                         )

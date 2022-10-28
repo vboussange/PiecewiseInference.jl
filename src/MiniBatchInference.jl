@@ -16,6 +16,7 @@ module MiniBatchInference
     using Statistics, Distributions
 
     using ParametricModels
+    using Optimisers
 
     # parametric function
     abstract type ParamFun{N} end

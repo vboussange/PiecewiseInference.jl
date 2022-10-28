@@ -4,11 +4,13 @@ authors = ["Victor <bvictor@ethz.ch>"]
 version = "0.4.0"
 
 [deps]
+Bijectors = "76274a88-744f-5084-9051-94815aaf08c4"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Optimisers = "3bd65402-5787-11e9-1adc-39752487f4e2"
 Optimization = "7f7a1694-90dd-40f0-9382-eb1efda571ba"
 OptimizationOptimJL = "36348300-93cb-4f02-beb5-3c3902f8871e"
 OptimizationOptimisers = "42dfb2eb-d2b4-4451-abcd-913932933ac1"
