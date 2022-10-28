@@ -10,20 +10,15 @@ The initial conditions are assumed free parameters for each segments.
   - `θ`: [u0,p] where `p` corresponds to the parameters of ode function.
   - `ode_data`: Original Data to be modelled.
   - `tsteps`: Timesteps on which ode_data was calculated.
-  - `prob`: ODE problem that the Neural Network attempts to solve.
+  - `model`: ODE model
   - `loss_function`: A function to calculate loss, of the form `loss_function(data, params, pred, rg)`
   - `continuity_loss`: Function that takes states ``pred[:,ranges[k][end]]`` and
   ``data[:,ranges[k+1][1]]}`` as input and calculates prediction continuity loss
   between them.
   If no custom `continuity_loss` is specified, `sum(abs, û_end - u_0)` is used.
-  - `solver`: ODE Solver algorithm.
   - `ranges`: Vector containg range for each segment.
   - `continuity_term`: Weight term to ensure continuity of predictions throughout
     different groups.
-  - `kwargs`: Additional arguments splatted to the ODE solver. Refer to the
-  [Local Sensitivity Analysis](https://diffeq.sciml.ai/dev/analysis/sensitivity/) and
-  [Common Solver Arguments](https://diffeq.sciml.ai/dev/basics/common_solver_opts/)
-  documentation for more details.
 # Note:
 The parameter 'continuity_term' should be a relatively big number to enforce a large penalty
 whenever the last point of any group doesn't coincide with the first point of next group.
@@ -32,10 +27,9 @@ function minibatch_loss(
     θ::AbstractArray,
     ode_data::AbstractArray,
     tsteps::AbstractArray,
-    prob::ODEProblem,
+    model::AbstractModel,
     loss_function,
     continuity_loss,
-    solver::DiffEqBase.AbstractODEAlgorithm,
     ranges::AbstractArray;
     continuity_term::Real=0,
     kwargs...
@@ -52,10 +46,13 @@ function minibatch_loss(
     group_predictions = Vector{Array{eltype(θ)}}(undef, length(ranges))
     for (i, rg) in enumerate(ranges)
         u0_i = u0s[i] # taking absolute value, assuming populations cannot be negative
-        prob_i = remake(prob; p=params, tspan=(tsteps[first(rg)], tsteps[last(rg)]), u0=u0_i,)
         data = ode_data[:, rg]
-        sol = solve(prob_i, solver; saveat=tsteps[rg], kwargshandle=KeywordArgError, kwargs...)
-
+        sol = simulate(model,
+                        u0_i,
+                        (tsteps[first(rg)], tsteps[last(rg)]), 
+                        params, 
+                        saveat=tsteps[rg], 
+                        kwargshandle=KeywordArgError, kwargs...)
         # Abort and return infinite loss if one of the integrations failed
         sol.retcode == :Success && sol.retcode !== :Terminated ? nothing : return Inf, group_predictions
 
@@ -80,7 +77,6 @@ function minibatch_loss(
     tsteps::AbstractArray,
     prob::ODEProblem,
     loss_function::Function,
-    solver::DiffEqBase.AbstractODEAlgorithm,
     ranges::AbstractArray;
     kwargs...,
 )
@@ -92,7 +88,6 @@ function minibatch_loss(
             prob,
             loss_function,
             _default_continuity_loss,
-            solver,
             ranges::AbstractArray;
             kwargs...,
         )

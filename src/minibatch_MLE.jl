@@ -19,13 +19,11 @@ Returns `minloss, p_trained, ranges, losses, θs`.
 
 # arguments
 - opt : array of optimizers
-- p_init : initial guess for parameters of `prob`
+- p_init : initial guess for parameters of `model`
 - group_size : size of segments
 - data_set : data
 - prob : ODE problem for the state variables.
 - tsteps : corresponding to data
-- alg : ODE solver
-- sensealg : sensitivity solver
 
 # optional
 - `loss_fn` : the loss function, that takes as arguments `loss_fn(data, params, pred, rg, ic_term)` where 
@@ -123,10 +121,8 @@ function _minibatch_MLE(;p_init,
                         u0s_init = nothing, # provided by iterative_minibatch_MLE
                         ranges, # provided by minibatch_MLE
                         data_set, 
-                        prob, 
+                        model, 
                         tsteps, 
-                        alg, 
-                        sensealg,
                         loss_fn = _loss_multiple_shoot_init,
                         optimizers = [ADAM(0.01), BFGS(initial_stepnorm=0.01)],
                         epochs = [1000, 200],
@@ -142,7 +138,7 @@ function _minibatch_MLE(;p_init,
                         save_pred = true, 
                         kwargs...
                         )
-    dim_prob = length(prob.u0) #used by loss_nm
+    dim_prob = get_dims(model) #used by loss_nm
     @assert length(optimizers) == length(epochs)
 
     # minibatch loss
@@ -150,12 +146,10 @@ function _minibatch_MLE(;p_init,
         return minibatch_loss(θ, 
                             data_set, 
                             tsteps, 
-                            prob, 
+                            model, 
                             (data, params, pred, rg) -> loss_fn(data, params, pred, rg, ic_term),
-                            alg, 
                             ranges, 
                             continuity_term = continuity_term, 
-                            sensealg = sensealg;
                             kwargs...)
     end
 
