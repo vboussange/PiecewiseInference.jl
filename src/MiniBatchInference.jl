@@ -15,6 +15,8 @@ module MiniBatchInference
     using UnPack
     using Statistics, Distributions
 
+    using ParametricModels
+
     # parametric function
     abstract type ParamFun{N} end
     import Base.length

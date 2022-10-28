@@ -1,5 +1,5 @@
-using LinearAlgebra
-
+using LinearAlgebra, ParametricModels
+@model dudt
 function dudt(du, u, p, t)
     du .=  0.1 .* u .* ( 1. .- p .* u) 
 end
