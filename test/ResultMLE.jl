@@ -3,7 +3,7 @@ using Bijectors: Exp, inverse, Identity, Stacked
 using UnPack
 using OptimizationOptimisers
 using Test
-using MiniBatchInference
+using PiecewiseInference
 
 @model MyModel
 function (m::MyModel)(du, u, p, t)

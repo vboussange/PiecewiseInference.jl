@@ -139,7 +139,7 @@ end
 function loglikelihood(res::InferenceResult, 
                         ode_data::Array, 
                         Σ; 
-                        loglike_fn = MiniBatchInference.loglikelihood_lognormal , 
+                        loglike_fn = PiecewiseInference.loglikelihood_lognormal , 
                         u0s = res.res.u0s_trained,
                         p = res.res.p_trained) # we take res.res.p_trained because we would have to transform the parameters otherwise
 
@@ -185,7 +185,7 @@ end
 $(SIGNATURES)
 
 """
-function get_var_covar_matrix(reseco::InferenceResult, odedata::Array, σ::Number, loglike_fn = MiniBatchInference.loglikelihood_lognormal)
+function get_var_covar_matrix(reseco::InferenceResult, odedata::Array, σ::Number, loglike_fn = PiecewiseInference.loglikelihood_lognormal)
     likelihood_fn_optim(p) = Econobio.loglikelihood(reseco, odedata, σ; p = p, loglike_fn)
     p_trained = reseco.res.p_trained
     numerical_hessian = ForwardDiff.hessian(likelihood_fn_optim, p_trained)
@@ -213,7 +213,7 @@ $(SIGNATURES)
 compute_cis_normal(reseco::InferenceResult, odedata, p, α, σ) = compute_cis(get_var_covar_matrix(reseco, 
                                                                     odedata,
                                                                     σ, 
-                                                                    loglike_fn = MiniBatchInference.loglikelihood_normal), 
+                                                                    loglike_fn = PiecewiseInference.loglikelihood_normal), 
                                                                     p, α)
 
 """
@@ -223,7 +223,7 @@ $(SIGNATURES)
 compute_cis_lognormal(reseco::InferenceResult,odedata, p, α, σ) = compute_cis(get_var_covar_matrix(reseco, 
                                                                             odedata,
                                                                             σ, 
-                                                                            loglike_fn = MiniBatchInference.loglikelihood_lognormal), 
+                                                                            loglike_fn = PiecewiseInference.loglikelihood_lognormal), 
                                                                             p, α)
 
 

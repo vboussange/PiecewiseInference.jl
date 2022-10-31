@@ -5,7 +5,7 @@ model(u0,t,p).
 It can encompass models with closed form formula, or ODE models wrapped in an
 `AbstractModel`.
 
-This is future work, but should probably be the best model format of MiniBatchInference.jl.
+This is future work, but should probably be the best model format of PiecewiseInference.jl.
 
 A macro could be implemented to define more simply an AbstractModel by the user.
 =#

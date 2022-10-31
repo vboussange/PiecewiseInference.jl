@@ -1,10 +1,10 @@
-using MiniBatchInference, Test, ForwardDiff, OrdinaryDiffEq
+using PiecewiseInference, Test, ForwardDiff, OrdinaryDiffEq
 using DiffEqSensitivity:ForwardDiffSensitivity
 using OptimizationOptimJL:BFGS
 using OptimizationOptimisers:Adam
 using Revise
 
-@testset "MiniBatchInference" begin
+@testset "PiecewiseInference" begin
     # include("FIM.jl")
     include("ResultMLE.jl")
     include("minibatch_loss.jl")
@@ -12,7 +12,7 @@ using Revise
 end
 
 if false # testing plot recipes
-    @testset "MiniBatchInference" begin
+    @testset "PiecewiseInference" begin
         using PyPlot  # to test plot_convergence
         include("plot_convergence.jl")
     end

@@ -1,9 +1,9 @@
-# MiniBatchInference.jl
+# PiecewiseInference.jl
 
 ```@eval
 DocStringExtensions.README
 ```
 
 ```@autodocs
-Modules = [MiniBatchInference]
+Modules = [PiecewiseInference]
 ```

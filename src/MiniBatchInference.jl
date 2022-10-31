@@ -2,7 +2,7 @@ __precompile__(false)
 """
 $(DocStringExtensions.README)
 """
-module MiniBatchInference
+module PiecewiseInference
     using ParametricModels
     using OrdinaryDiffEq
     using Optimization

@@ -1,13 +1,13 @@
 using Documenter
-using MiniBatchInference
+using PiecewiseInference
 
 makedocs(
-    sitename = "MiniBatchInference",
+    sitename = "PiecewiseInference",
     format = Documenter.HTML(),
-    modules = [MiniBatchInference]
+    modules = [PiecewiseInference]
 )
 
-deploydocs(repo = "github.com/vboussange/MiniBatchInference.jl", devbranch="main")
+deploydocs(repo = "github.com/vboussange/PiecewiseInference.jl", devbranch="main")
 
 # Documenter can also automatically deploy documentation to gh-pages.
 # See "Hosting Documentation" and deploydocs() in the Documenter manual
