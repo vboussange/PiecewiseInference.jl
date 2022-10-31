@@ -1,4 +1,4 @@
-# PiecewiseInference
+# PiecewiseInference.jl
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://vboussange.github.io/PiecewiseInference.jl/stable/)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://vboussange.github.io/PiecewiseInference.jl/dev/)
 [![Build status (Github Actions)](https://github.com/vboussange/PiecewiseInference.jl/workflows/CI/badge.svg)](https://github.com/vboussange/PiecewiseInference.jl/actions)
@@ -7,12 +7,17 @@
 Suite for inverse modeling in ecology, combining ML techniques and mechanistic ecological models (dynamical ODEs).
 
 ## Installation
-Open Julia and type the following
+**PiecewiseInference.jl** has **ParametricModels.jl** in its dependency, a non-registered package. As such, to install **PiecewiseInference.jl**, you need to first add an extra registry to your Julia installation - but this is very easy! Open Julia and type the following
 ```julia
 using Pkg
-Pkg.add("https://github.com/vboussange/PiecewiseInference.jl")
+pkg"registry add https://github.com/vboussange/VBoussangeRegistry.git"
 ```
-This will download the latest version from the git repo and download all dependencies.
+Then go on and 
+```julia
+pkg"add PiecewiseInference"
+```
+
+That's it! This will download the latest version of **PiecewiseInference.jl** from this git repo and download all dependencies.
 
 
 ## Getting started
