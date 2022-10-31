@@ -855,7 +855,7 @@ version = "0.12.3"
 
 [[deps.ParametricModels]]
 deps = ["Bijectors", "DiffEqSensitivity", "Distributions", "DocStringExtensions", "Lazy", "LinearAlgebra", "Optimisers", "OrdinaryDiffEq", "Requires", "SciMLBase", "Statistics", "UnPack"]
-path = "/Users/victorboussange/ETHZ/projects/ParametricModels"
+git-tree-sha1 = "3446bdd25de0a9ccf8ff596f97bfe4109fc65b25"
 uuid = "ea05b012-1b06-4aec-a786-2a545e229cd0"
 version = "0.1.0"
 

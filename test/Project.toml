@@ -1,4 +1,5 @@
 [deps]
+Bijectors = "76274a88-744f-5084-9051-94815aaf08c4"
 DiffEqSensitivity = "41bf760c-e81c-5289-8e54-58b1f1f8abe2"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
@@ -9,3 +10,4 @@ ParametricModels = "ea05b012-1b06-4aec-a786-2a545e229cd0"
 PyPlot = "d330b81b-6aea-500a-939a-2ce795aea3ee"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
