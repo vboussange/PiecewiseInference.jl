@@ -31,8 +31,8 @@ ode_data = Array(sol_data)
 optimizers = [Adam(0.001)]
 epochs = [5000]
 
-@testset "minibatch MLE" begin
-    res = minibatch_MLE(p_init = p_init, 
+@testset "piecewise MLE" begin
+    res = piecewise_MLE(p_init = p_init, 
                         group_size = 101, 
                         data_set = ode_data, 
                         model = model, 
@@ -46,7 +46,7 @@ end
 
 @testset "MLE 1 group" begin
     ode_data_wnoise = ode_data .+ randn(size(ode_data)) .* 0.1
-    res = minibatch_MLE(p_init = p_init, 
+    res = piecewise_MLE(p_init = p_init, 
                         group_size = size(ode_data,2) + 1, 
                         data_set = ode_data_wnoise, 
                         model = model, 
@@ -56,7 +56,7 @@ end
     @test all( isapprox.(res.p_trained, p_true[:b], rtol = 1e-1))
 end
 
-@testset "minibatch MLE independent TS" begin
+@testset "piecewise MLE independent TS" begin
     tsteps_arr = [tsteps[1:30],tsteps[31:60],tsteps[61:90]] # 3 ≠ time steps with ≠ length
 
     u0s = [rand(2) .+ 1, rand(2) .+ 1, rand(2) .+ 1]
@@ -71,7 +71,7 @@ end
     optimizers = [Adam(0.001)]
     epochs = [5000]
 
-    res = minibatch_ML_indep_TS(data_set = ode_datas, 
+    res = piecewise_ML_indep_TS(data_set = ode_datas, 
                         group_size = 31, 
                         tsteps = tsteps_arr, 
                         p_init = p_init, 
@@ -82,7 +82,7 @@ end
     @test all(isapprox.(res.p_trained, p_true[:b], rtol = 1e-1 ))
 end
 
-@testset "Initialisation iterative minibatch ML" begin
+@testset "Initialisation iterative piecewise ML" begin
     group_size_init = 11
     datasize = 100
     ranges_init = group_ranges(datasize, group_size_init)
@@ -90,11 +90,11 @@ end
     ranges_2 = group_ranges(datasize, group_size_2)
     pred_init = [cumsum(ones(3, length(rng)), dims=2) for rng in ranges_init]
 
-    u0_2 = PiecewiseInference._initialise_u0s_iterative_minibatch_ML(pred_init, ranges_init, ranges_2)
+    u0_2 = PiecewiseInference._initialise_u0s_iterative_piecewise_ML(pred_init, ranges_init, ranges_2)
     @test all(u0_2 .== 1.)
 end
 
-@testset "Iterative minibatch MLE" begin
+@testset "Iterative piecewise MLE" begin
     ode_data_wnoise = ode_data .+ randn(size(ode_data)) .* 0.1
     group_size_init = 51
 
@@ -104,7 +104,7 @@ end
     group_sizes = vcat(group_size_init, div_data[div_data .> group_size_init] .+ 1)
     optimizers_array = [[Adam(0.001)] for _ in 1:length(group_sizes)]
     epochs = [5000]
-    res_array = iterative_minibatch_MLE(group_sizes = group_sizes, 
+    res_array = iterative_piecewise_MLE(group_sizes = group_sizes, 
                                         optimizers_array = optimizers_array,
                                         epochs = epochs,
                                         p_init = p_init,  

@@ -36,7 +36,7 @@ function loglikelihood(res::InferenceResult,
     θ = [u0s...;p] 
     prob = ODEProblem(res.m, u0s[1], (get_tspan(res.m)), p)
     loss_fn(data, params, pred, rg) = loglike_fn(data, pred, Σ)
-    l, _ = minibatch_loss(θ, ode_data, get_kwargs(res.m)[:saveat], prob, loss_fn, get_alg(res.m), res.res.ranges; continuity_term=0.)
+    l, _ = piecewise_loss(θ, ode_data, get_kwargs(res.m)[:saveat], prob, loss_fn, get_alg(res.m), res.res.ranges; continuity_term=0.)
     return l
 end
 

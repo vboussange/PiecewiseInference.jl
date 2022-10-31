@@ -1,7 +1,7 @@
 """
 $(SIGNATURES)
 
-Returns a tuple (`loss`, `pred`) obtained from minibatching of the 
+Returns a tuple (`loss`, `pred`) obtained from piecewiseing of the 
 time series `ode_data` into segments with time steps given by `tsteps[ranges[i]]`.
 The initial conditions are assumed free parameters for each segments.
 ! the dynamics is assumed to lie in R⁺ !
@@ -23,7 +23,7 @@ The initial conditions are assumed free parameters for each segments.
 The parameter 'continuity_term' should be a relatively big number to enforce a large penalty
 whenever the last point of any group doesn't coincide with the first point of next group.
 """
-function minibatch_loss(
+function piecewise_loss(
     θ::AbstractArray,
     ode_data::AbstractArray,
     tsteps::AbstractArray,
@@ -71,7 +71,7 @@ function minibatch_loss(
     return loss, group_predictions
 end
 
-function minibatch_loss(
+function piecewise_loss(
     θ::AbstractArray,
     ode_data::AbstractArray,
     tsteps::AbstractArray,
@@ -81,7 +81,7 @@ function minibatch_loss(
     kwargs...,
 )
 
-    return minibatch_loss(
+    return piecewise_loss(
             θ,
             ode_data,
             tsteps,

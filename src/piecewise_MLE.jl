@@ -3,7 +3,7 @@
 """
 $(SIGNATURES)
 
-default loss function for `minibatch_MLE`.
+default loss function for `piecewise_MLE`.
 """
 function _loss_multiple_shoot_init(data, params, pred, rg, ic_term)
     l =  mean((data - pred).^2)
@@ -14,7 +14,7 @@ end
 """
 $(SIGNATURES)
 
-Inference with minibatching. Loops through the optimizers `optimizers`.
+Inference with piecewiseing. Loops through the optimizers `optimizers`.
 Returns `minloss, p_trained, ranges, losses, θs`.
 
 # arguments
@@ -29,7 +29,7 @@ Returns `minloss, p_trained, ranges, losses, θs`.
 - `loss_fn` : the loss function, that takes as arguments `loss_fn(data, params, pred, rg, ic_term)` where 
     `data` is the training data, `params` is the parameter of the model (for defining priors)
     pred` corresponds to the predicted state variables, `rg` corresponds
-    to the range of the minibatch wrt the initial data, and `ic_term` is a weight on the initial conditions. 
+    to the range of the piecewise wrt the initial data, and `ic_term` is a weight on the initial conditions. 
     `loss_fn` must transform the pred into the observables, with a function 
     `h` that maps the state variables to the observables. By default, `h` is taken as the identity.
 - `u0_init` : if not provided, we initialise from `data_set`
@@ -47,20 +47,20 @@ Returns `minloss, p_trained, ranges, losses, θs`.
 - `p_labs` : labels of the true parameters
 - `threshold` : default to 1e-6
 """
-function minibatch_MLE(;group_size::Int,  kwargs...)
+function piecewise_MLE(;group_size::Int,  kwargs...)
     datasize = size(kwargs[:data_set],2)
-    _minibatch_MLE(;ranges=get_ranges(group_size, datasize),  kwargs...)
+    _piecewise_MLE(;ranges=get_ranges(group_size, datasize),  kwargs...)
 end
 
 """
 $(SIGNATURES)
 
-Similar to `minibatch_MLE` but for independent time series, where `data_set`
+Similar to `piecewise_MLE` but for independent time series, where `data_set`
 is a vector containing the independent arrays corresponding to the time series,
 and `tsteps` is a vector where each entry contains the time steps
 of the corresponding time series.
 """
-function minibatch_ML_indep_TS(;group_size::Int,
+function piecewise_ML_indep_TS(;group_size::Int,
                                 data_set::Vector, #many different initial conditions
                                 tsteps::Vector, #corresponding time steps
                                 save_pred = true, # saving prediction
@@ -81,7 +81,7 @@ function minibatch_ML_indep_TS(;group_size::Int,
     ranges_cat = vcat(ranges_arr...)
     tsteps_cat = vcat(tsteps...)
 
-    res = _minibatch_MLE(;ranges=ranges_cat,
+    res = _piecewise_MLE(;ranges=ranges_cat,
         data_set=data_set_cat, 
         tsteps=tsteps_cat, 
         kwargs...,
@@ -117,9 +117,9 @@ function minibatch_ML_indep_TS(;group_size::Int,
     return res_arr
 end
 
-function _minibatch_MLE(;p_init, 
-                        u0s_init = nothing, # provided by iterative_minibatch_MLE
-                        ranges, # provided by minibatch_MLE
+function _piecewise_MLE(;p_init, 
+                        u0s_init = nothing, # provided by iterative_piecewise_MLE
+                        ranges, # provided by piecewise_MLE
                         data_set, 
                         model, 
                         tsteps, 
@@ -142,9 +142,9 @@ function _minibatch_MLE(;p_init,
     @assert length(optimizers) == length(epochs)
     p_init, _ = Optimisers.destructure(p_init)
 
-    # minibatch loss
+    # piecewise loss
     function _loss(θ)
-        return minibatch_loss(θ, 
+        return piecewise_loss(θ, 
                             data_set, 
                             tsteps, 
                             model, 
@@ -162,7 +162,7 @@ function _minibatch_MLE(;p_init,
 
     θ = [u0s_init;p_init]
     nb_group = length(ranges)
-    println("minibatch_MLE with $(length(tsteps)) points and $nb_group groups.")
+    println("piecewise_MLE with $(length(tsteps)) points and $nb_group groups.")
 
     # Here we need a default behavior for Optimization.jl (see https://github.com/SciML/Optimization.jl/blob/c0a51120c7c54a89d091b599df30eb40c4c0952b/lib/OptimizationFlux/src/OptimizationFlux.jl#L53)
     callback(θ, l, pred=[]) = begin
@@ -256,7 +256,7 @@ $(SIGNATURES)
 function get_ranges(group_size, datasize)
     if group_size-1 < datasize
         ranges = group_ranges(datasize, group_size)
-        # minibatching
+        # piecewiseing
     else
         ranges = [1:datasize]
         # normal MLE with initial estimation
@@ -268,21 +268,21 @@ end
 """
 $(SIGNATURES)
 
-Performs a iterative minibatch MLE, iterating over `group_sizes`. 
+Performs a iterative piecewise MLE, iterating over `group_sizes`. 
 Stops the iteration when loss function increases between two iterations.
 
 Returns an array with all `ResultMLE` obtained during the iteration.
-For kwargs, see `minibatch_MLE`.
+For kwargs, see `piecewise_MLE`.
 
 # Note 
-- for now, does not support independent time series (`minibatch_ML_indep_TS`).
+- for now, does not support independent time series (`piecewise_ML_indep_TS`).
 - at every iteration, initial conditions are initialised given the predition of previous iterations
 
 # Specific arguments
 - `group_sizes` : array of group sizes to test
 - `optimizers_array`: optimizers_array[i] is an array of optimizers for the trainging processe of `group_sizes[i`
 """
-function iterative_minibatch_MLE(;group_sizes,
+function iterative_piecewise_MLE(;group_sizes,
                                 optimizers_array,
                                 threshold = 1e-16,
                                 kwargs...)
@@ -297,8 +297,8 @@ function iterative_minibatch_MLE(;group_sizes,
     for (i,gs) in enumerate(group_sizes)
         println("***************\nIterative training with group size $gs\n***************")
         ranges = get_ranges(group_sizes[i], datasize)
-        u0s_init = _initialise_u0s_iterative_minibatch_ML(res.pred,res.ranges,ranges)
-        tempres = _minibatch_MLE(;ranges = ranges, 
+        u0s_init = _initialise_u0s_iterative_piecewise_ML(res.pred,res.ranges,ranges)
+        tempres = _piecewise_MLE(;ranges = ranges, 
                                 optimizers = optimizers_array[i],
                                 u0s_init = reshape(u0s_init,:),
                                 threshold = threshold,
@@ -313,7 +313,7 @@ function iterative_minibatch_MLE(;group_sizes,
     return res_array
 end
 
-function _initialise_u0s_iterative_minibatch_ML(pred, ranges_pred, ranges_2)
+function _initialise_u0s_iterative_piecewise_ML(pred, ranges_pred, ranges_2)
     dim_prob = size(first(pred),1)
     u0_2 = zeros(eltype(first(pred)), dim_prob, length(ranges_2))
     for (i, rng2) in enumerate(ranges_2)

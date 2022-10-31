@@ -49,11 +49,11 @@ but lognormal observational noise can be chosen by setting
 ` loglike_fn = loglikelihood_lognormal`. In such case, Σ corresponds to the standard deviation of the log normal noise.
 """
 function loglikelihood(res::ResultMLE, data_set::Array, Σ; loglike_fn = loglikelihood_normal) 
-    isempty(res.pred) ? error("`res.pred` should not be empty, use `minibatch_MLE` with `save_pred = true`") : nothing
+    isempty(res.pred) ? error("`res.pred` should not be empty, use `piecewise_MLE` with `save_pred = true`") : nothing
     return loglikelihood(res.pred, res.ranges, data_set, Σ, loglike_fn)
 end
 
-#specialised version for minibatch
+#specialised version for piecewise
 function loglikelihood(pred::Vector, ranges::Vector, data_set::Array, Σ, loglike_fn) 
     if typeof(pred) <: Vector{Vector{Array{T}}} where T # for independent time series
         error("Function to yet implemented from `ResultMLE` with Independent time series")
@@ -145,7 +145,7 @@ function loglikelihood(res::InferenceResult,
 
     θ = [u0s...;p] 
     loss_fn(data, params, pred, rg) = loglike_fn(data, pred, Σ)
-    l, _ = minibatch_loss(θ, ode_data, get_kwargs(res.m)[:saveat], model, loss_fn, res.res.ranges; continuity_term=0.)
+    l, _ = piecewise_loss(θ, ode_data, get_kwargs(res.m)[:saveat], model, loss_fn, res.res.ranges; continuity_term=0.)
     return l
 end
 

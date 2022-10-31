@@ -1,5 +1,5 @@
 #=
-This file aims at implementing a minibatch loss where the model is something like
+This file aims at implementing a piecewise loss where the model is something like
 model(u0,t,p).
 
 It can encompass models with closed form formula, or ODE models wrapped in an
@@ -17,9 +17,9 @@ log_growth2(t, r, b, u0) = (u0 * exp(r * tsteps)) / (1 + b * u0 * (exp(r*t) - 1e
 """
 $(SIGNATURES)
 
-Minibatch_loss for simple `model(t, p, u0).`
+piecewise_loss for simple `model(t, p, u0).`
 """
-function minibatch_loss(θ, ode_data::Vector, model::AbstractModel, tsteps, loss_function, ranges)
+function piecewise_loss(θ, ode_data::Vector, model::AbstractModel, tsteps, loss_function, ranges)
     dim_prob = 1
     nb_group = length(ranges)
     params = _get_param(θ, nb_group, dim_prob) # params of the problem

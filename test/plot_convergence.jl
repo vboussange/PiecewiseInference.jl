@@ -50,7 +50,7 @@ end
     @test isa(fig1, Figure)
 end
 
-@testset "minibatch MLE" begin
+@testset "piecewise MLE" begin
 
     function dudt(du, u, p, t)
         du .=  0.1 .* u .* ( 1. .- p .* u) 
@@ -70,7 +70,7 @@ end
     optimizers = [Adam(0.01)]
 
     isdir("figures") ? nothing : mkdir("figures") 
-    res = minibatch_MLE(p_init = p_init, 
+    res = piecewise_MLE(p_init = p_init, 
                         group_size = 101, 
                         data_set = ode_data, 
                         prob = prob, 

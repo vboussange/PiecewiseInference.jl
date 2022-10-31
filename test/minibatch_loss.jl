@@ -32,8 +32,8 @@ loss_function(data, params, pred, rg) = sum(abs2, data - pred)
 # gcf()
 θ = [ode_data[:,first.(ranges),:][:];p_init[:b]]
  
-@testset "Testing correct behavior `minibatch_loss`" begin
-    l, pred = minibatch_loss(θ, 
+@testset "Testing correct behavior `piecewise_loss`" begin
+    l, pred = piecewise_loss(θ, 
                         ode_data, 
                         tsteps, 
                         model, 
@@ -44,8 +44,8 @@ loss_function(data, params, pred, rg) = sum(abs2, data - pred)
     @test isa(pred, Vector)
 end
 
-@testset "Testing differentiability `minibatch_loss`" begin
-    _loss(θ) = minibatch_loss(θ, 
+@testset "Testing differentiability `piecewise_loss`" begin
+    _loss(θ) = piecewise_loss(θ, 
                         ode_data, 
                         tsteps, 
                         model, 

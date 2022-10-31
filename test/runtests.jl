@@ -7,8 +7,8 @@ using Revise
 @testset "PiecewiseInference" begin
     # include("FIM.jl")
     include("ResultMLE.jl")
-    include("minibatch_loss.jl")
-    include("minibatch_MLE.jl")
+    include("piecewise_loss.jl")
+    include("piecewise_MLE.jl")
 end
 
 if false # testing plot recipes

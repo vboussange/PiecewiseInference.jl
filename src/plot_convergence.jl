@@ -1,5 +1,5 @@
 # this file contains utilities for plotting convergence during the training
-# trajectory for ensmeble problems, for minibatch_loss simplu put 0
+# trajectory for ensmeble problems, for piecewise_loss simplu put 0
 lss = ["-","-."] 
 fontdict = Dict("size" => 16)
 """

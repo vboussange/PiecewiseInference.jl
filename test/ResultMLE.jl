@@ -31,8 +31,8 @@ ode_data = Array(sol_data)
 optimizers = [Adam(0.001)]
 epochs = [10]
 
-@testset "`ResultMLE`` from `minibatch_ML`" begin
-    res = minibatch_MLE(p_init = p_init, 
+@testset "`ResultMLE`` from `piecewise_ML`" begin
+    res = piecewise_MLE(p_init = p_init, 
                         group_size = 101, 
                         data_set = ode_data, 
                         model = model, 
@@ -46,7 +46,7 @@ epochs = [10]
     @test (AIC(res, ode_data, diagm(ones(length(u0)))) isa Number)
 end
 
-@testset "u0s for `ResultMLE`` from `minibatch_ML_indep_TS`" begin
+@testset "u0s for `ResultMLE`` from `piecewise_ML_indep_TS`" begin
     tsteps_arr = [tsteps[1:30],tsteps[31:60],tsteps[61:90]] # 3 ≠ time steps with ≠ length
 
     u0s = [rand(2) .+ 1, rand(2) .+ 1, rand(2) .+ 1]
@@ -58,7 +58,7 @@ end
         push!(ode_datas, ode_data)
     end
 
-    res = minibatch_ML_indep_TS(data_set = ode_datas, 
+    res = piecewise_ML_indep_TS(data_set = ode_datas, 
                         group_size = 31, 
                         tsteps = tsteps_arr, 
                         p_init = p_init, 
