@@ -149,7 +149,7 @@ function _piecewise_MLE(;p_init,
                             tsteps, 
                             model, 
                             (data, params, pred, rg) -> loss_fn(data, params, pred, rg, ic_term),
-                            ranges, 
+                            ranges;
                             continuity_term = continuity_term, 
                             kwargs...)
     end
