@@ -6,6 +6,8 @@
 
 Suite for inverse modeling in ecology, combining ML techniques and mechanistic ecological models (dynamical ODEs).
 
+![](docs/animated.gif)
+
 ## Installation
 **PiecewiseInference.jl** has **ParametricModels.jl** in its dependency, a non-registered package. As such, to install **PiecewiseInference.jl**, you need to first add an extra registry to your Julia installation - but this is very easy! Open Julia and type the following
 ```julia
