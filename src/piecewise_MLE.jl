@@ -141,6 +141,7 @@ function _piecewise_MLE(;p_init,
     dim_prob = get_dims(model) #used by loss_nm
     @assert length(optimizers) == length(epochs)
     p_init, _ = Optimisers.destructure(p_init)
+    p_init = get_st(model)(p_init) # projecting p_init in optimization space
 
     # piecewise loss
     function _loss(θ)
