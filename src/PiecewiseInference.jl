@@ -36,8 +36,9 @@ module PiecewiseInference
 
     export ForwardDiffSensitivity # from DiffEqSensitivity
     export ParamFun, ResultMLE, InferenceResult
-    export group_ranges, AIC, AICc, AICc_TREE, moments!, moments, FIM_strouwen, FIM_yazdani, divisors, loglikelihood, RSS
+    export group_ranges, AIC, AICc, AICc_TREE, moments!, moments, divisors
     export piecewise_loss
     export piecewise_MLE, piecewise_ML_indep_TS, iterative_piecewise_MLE, get_ranges
     export plot_convergence
+    export FIM_strouwen, FIM_yazdani, loglikelihood, estimate_σ, RSS, R2
 end # module

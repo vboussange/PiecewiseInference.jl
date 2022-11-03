@@ -26,8 +26,11 @@ $(SIGNATURES)
 
 # Args
 - `noisedistrib` corresponds to the assumed distribution of the noise. 
-It can be `:LogNormal` or `:Normal` (comprising the multivariate types)
+It can be `:MvLogNormal` or `:MvNormal` (comprising the multivariate types)
 """
+# loglikelihood `ResultMLE` instead of `InferenceResult` cannot simulate model because it does not store it.
+# Hence it needs to store the predictions.
+# This should be fixed in the future
 function loglikelihood(res::ResultMLE, data_set::Array, noisedistrib::Sampleable) 
     isempty(res.pred) ? error("`res.pred` should not be empty, use `piecewise_MLE` with `save_pred = true`") : nothing
     return loglikelihood(res.pred, res.ranges, data_set, noisedistrib)
@@ -47,39 +50,41 @@ end
 # see https://juliaeconomics.com/2014/06/16/numerical-maximum-likelihood-the-ols-example/
 
 
-function loglikelihood(pred_all_batches::Array, data_all_batches::Array, noisedistrib::Normal)
+function loglikelihood(pred_all_batches::Array, data_all_batches::Array, noisedistrib::MvNormal)
     @assert all(noisedistrib.μ .== 0.) "`noisedistrib` must have 0 mean, because the mean error should be zero"
     l = 0.
-    for i in 1:length(pred_all_batches)
+    for i in 1:size(pred_all_batches,2)
         ϵ = pred_all_batches[:,i] - data_all_batches[:,i]
         l += logpdf(noisedistrib, ϵ)
     end
     return l
 end
 
-function loglikelihood(pred_all_batches::Array, data_all_batches::Array, noisedistrib::LogNormal)
+get_μ(dist::MvLogNormal) = dist.normal.μ
+
+function loglikelihood(pred_all_batches::Array, data_all_batches::Array, noisedistrib::MvLogNormal)
     l = 0.
-    @assert all(noisedistrib.μ .== 0.) "`noisedistrib` must have 0 mean, because the mean error should be zero"
+    @assert all(get_μ(noisedistrib) .== 0.) "`noisedistrib` must have 0 mean, because the mean error should be zero"
     for i in 1:size(pred_all_batches,2)
-        if all(pred_all_batches[:,i] > 0.) && all(data_all_batches[:,i] > 0.)
-            ϵ = pred_all_batches[:,i] - data_all_batches[:,i]
-            l += logpdf(noisedistrib, ϵ)
+        if all(pred_all_batches[:,i] .> 0.) && all(data_all_batches[:,i] .> 0.)
+            ϵ = log.(pred_all_batches[:,i]) - log.(data_all_batches[:,i])
+            l += logpdf(noisedistrib.normal, ϵ) # see Schartau 2017 (https://bg.copernicus.org/articles/14/1647/2017/) Eq. 14.
         end
     end
-    return l
-    # NOTE: pdf(MvNormal(zeros(2), σ^2 * diagm(ones(2))), [0.,0.]) ≈ pdf(Normal(0.,σ),0.)^2
+    return l - sum(log.(pred_all_batches))
+    # NOTE: pdf(MvNormal(zeros(2), σ^2 * diagm(ones(2))), [0.,0.]) ≈ pdf(MvNormal(0.,σ),0.)^2
 end
 
 function loglikelihood(res::InferenceResult, 
-    ode_data::Array, 
-    noisedistrib
-    ; 
-    u0s = res.res.u0s_trained,
-    p = res.res.p_trained) # we take res.res.p_trained because we would have to transform the parameters otherwise
-
+                        ode_data::Array, 
+                        noisedistrib;
+                        u0s = res.res.u0s_trained,
+                        p = res.res.p_trained) # we take res.res.p_trained because we would have to transform the parameters otherwise
+    p, _ = Optimisers.destructure(p)
+    p = p |> res.m.mp.st
     θ = [u0s...;p] 
-    loss_fn(data, params, pred, rg) = PiecewiseInference.loglikelihood(data, pred, noisedistrib)
-    l, _ = piecewise_loss(θ, ode_data, get_kwargs(res.m)[:saveat], model, loss_fn, res.res.ranges; continuity_term=0.)
+    loss_fn(data, params, pred, rg) = PiecewiseInference.loglikelihood(pred, data, noisedistrib)
+    l, _ = piecewise_loss(θ, ode_data, get_kwargs(res.m)[:saveat], res.m, loss_fn, res.res.ranges; continuity_term=0.)
     return l
 end
 
@@ -111,19 +116,19 @@ $(SIGNATURES)
 
 Estimate noise variance, assuming similar noise across all the dimensions of the data.
 """
-function estimate_σ(pred::Array, odedata::Array, ::Normal)
+function estimate_σ(pred::Array, odedata::Array, ::MvNormal)
     @assert size(pred) == size(odedata)
     RSS = (pred .- odedata).^2
     return sqrt(mean(RSS))
 end
 
-function estimate_σ(pred::Array, odedata::Array, ::LogNormal)
+function estimate_σ(pred::Array, odedata::Array, ::MvLogNormal)
     @assert size(pred) == size(odedata)
     logsquare = (log.(pred) .- log.(odedata)).^2
     return sqrt(mean(logsquare[logsquare .< Inf]))
 end
 
-function estimate_σ(reseco::InferenceResult, odedata::Array; noisedistrib=LogNormal(), include_ic = true)
+function estimate_σ(reseco::InferenceResult, odedata::Array; noisedistrib=MvLogNormal(), include_ic = true)
     @assert !isempty(reseco.res.pred) "reseco should have been obtained with `save_pred = true`"
     if include_ic
     odedata = hcat([odedata[:,rg] for rg in reseco.res.ranges]...)
@@ -141,8 +146,8 @@ end
 $(SIGNATURES)
 
 """
-function get_var_covar_matrix(reseco::InferenceResult, odedata::Array, σ::Number, loglike_fn = PiecewiseInference.loglikelihood_lognormal)
-    likelihood_fn_optim(p) = Econobio.loglikelihood(reseco, odedata, σ; p = p, loglike_fn)
+function get_var_covar_matrix(reseco::InferenceResult, odedata::Array, noisedistrib::Sampleable)
+    likelihood_fn_optim(p) = Econobio.loglikelihood(reseco, odedata, noisedistrib; p = p)
     p_trained = reseco.res.p_trained
     numerical_hessian = ForwardDiff.hessian(likelihood_fn_optim, p_trained)
     var_cov_matrix = - inv(numerical_hessian)
@@ -166,28 +171,19 @@ end
 $(SIGNATURES)
 
 """
-compute_cis_normal(reseco::InferenceResult, odedata, p, α, σ) = compute_cis(get_var_covar_matrix(reseco, 
-                                                odedata,
-                                                σ, 
-                                                loglike_fn = PiecewiseInference.loglikelihood_normal), 
-                                                p, α)
-
-"""
-$(SIGNATURES)
-
-"""
-compute_cis_lognormal(reseco::InferenceResult,odedata, p, α, σ) = compute_cis(get_var_covar_matrix(reseco, 
-                                                        odedata,
-                                                        σ, 
-                                                        loglike_fn = PiecewiseInference.loglikelihood_lognormal), 
-                                                        p, α)
+compute_cis(reseco::InferenceResult, odedata, noisedistrib, p, α, σ) = compute_cis(get_var_covar_matrix(reseco, 
+                                                                                                        odedata,
+                                                                                                        noisedistrib),
+                                                                                                        p, α)
 
 
 """
 $(SIGNATURES)
 
+    We distinguish between R2 for log transformed values (with `dist::MvLogNormal` as last argument) 
+    and standard R2, to discard non positive values in the former case.
 """
-function R2(odedata, pred, ::LogNormal)
+function R2(odedata, pred, ::MvLogNormal)
     rsstot = log.(odedata) .- mean(log.(odedata), dims=1)
     rssreg = log.(pred) .- log.(odedata)
 
@@ -199,7 +195,7 @@ function R2(odedata, pred, ::LogNormal)
     return R2
 end
 
-function R2(odedata, pred, ::Normal)
+function R2(odedata, pred)
     rsstot = odedata .- mean(odedata, dims=1)
     rssreg = pred .- odedata
 

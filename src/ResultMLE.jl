@@ -28,7 +28,7 @@ Base.@kwdef struct InferenceResult{Model<:AbstractModel, RES}
     res::RES
 end
 import Base.show
-Base.show(io::IO, res::InferenceResult) = println(io, "`InferenceResult` with model", name(res.m))
+Base.show(io::IO, res::InferenceResult) = println(io, "`InferenceResult` with model ", name(res.m))
 
 """
 $(SIGNATURES)

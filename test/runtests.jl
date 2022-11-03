@@ -2,7 +2,7 @@ using PiecewiseInference, Test, ForwardDiff, OrdinaryDiffEq
 using DiffEqSensitivity:ForwardDiffSensitivity
 using OptimizationOptimJL:BFGS
 using OptimizationOptimisers:Adam
-using Revise
+using ParametricModels
 
 @testset "PiecewiseInference" begin
     # include("FIM.jl")
