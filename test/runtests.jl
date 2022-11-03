@@ -3,6 +3,7 @@ using DiffEqSensitivity:ForwardDiffSensitivity
 using OptimizationOptimJL:BFGS
 using OptimizationOptimisers:Adam
 using ParametricModels
+using Distributions
 
 @testset "PiecewiseInference" begin
     # include("FIM.jl")
