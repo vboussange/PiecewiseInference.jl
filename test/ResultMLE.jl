@@ -32,9 +32,14 @@ optimizers = [Adam(0.001)]
 epochs = [10]
 
 @testset "`ResultMLE`` from `piecewise_ML`" begin
+    σ = 0.1
+
+    ode_data_wn = Array(sol_data) 
+    ode_data_wn .+=  randn(size(ode_data)) .* σ
+
     res = piecewise_MLE(p_init = p_init, 
                         group_size = 101, 
-                        data_set = ode_data, 
+                        data_set = ode_data_wn, 
                         model = model, 
                         tsteps = tsteps, 
                         epochs = epochs, 
@@ -43,7 +48,7 @@ epochs = [10]
     u0s_init = res.u0s_trained[1]
     @test length(u0s_init) == length(u0)
 
-    @test (AIC(res, ode_data, diagm(ones(length(u0)))) isa Number)
+    @test (AIC(res, ode_data, MvNormal(zeros(length(u0)), σ^2 * LinearAlgebra.I)) isa Number)
 end
 
 @testset "u0s for `ResultMLE`` from `piecewise_ML_indep_TS`" begin
