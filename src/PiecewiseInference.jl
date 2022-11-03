@@ -27,6 +27,7 @@ module PiecewiseInference
     include("utils.jl")
     include("piecewise_loss.jl")
     include("piecewise_MLE.jl")
+    include("statistics.jl")
 
     plot_convergence(args...;kwargs...) = println("Plotting requires loading package `PyPlot`")
     function __init__()
@@ -34,7 +35,7 @@ module PiecewiseInference
     end
 
     export ForwardDiffSensitivity # from DiffEqSensitivity
-    export ParamFun, ResultMLE
+    export ParamFun, ResultMLE, InferenceResult
     export group_ranges, AIC, AICc, AICc_TREE, moments!, moments, FIM_strouwen, FIM_yazdani, divisors, loglikelihood, RSS
     export piecewise_loss
     export piecewise_MLE, piecewise_ML_indep_TS, iterative_piecewise_MLE, get_ranges

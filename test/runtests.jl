@@ -9,6 +9,7 @@ using Revise
     include("ResultMLE.jl")
     include("piecewise_loss.jl")
     include("piecewise_MLE.jl")
+    include("statistics.jl")
 end
 
 if false # testing plot recipes
