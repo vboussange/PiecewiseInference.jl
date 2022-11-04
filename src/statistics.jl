@@ -6,7 +6,14 @@ Computes the RSS of `res` given `data_set`.
 # Argument:
 - `fn` is set to `identity` but can be e.g. `log` if lognormal loss used.
 """
-function RSS(res::ResultMLE, data_set::Array, fn = identity)
+function RSS(res::ResultMLE, data_set::Array, noisedistrib::T)
+    if typeof(noisedistrib) isa MvNormal
+        fn = identity
+    elseif typeof(noisedistrib) isa MvLogNormal
+        fn = log
+    else
+        error("RSS for $T distributed eror is not defined")
+    end
     if typeof(res.pred) <: Vector{Vector{Array{T}}} where T
         error("not yet implemented for independent time series")
     else
@@ -31,7 +38,7 @@ It can be `:MvLogNormal` or `:MvNormal` (comprising the multivariate types)
 # loglikelihood `ResultMLE` instead of `InferenceResult` cannot simulate model because it does not store it.
 # Hence it needs to store the predictions.
 # This should be fixed in the future
-function loglikelihood(res::ResultMLE, data_set::Array, noisedistrib::Sampleable) 
+function loglikelihood(res::ResultMLE, data_set::Array, noisedistrib::Sampleable)
     isempty(res.pred) ? error("`res.pred` should not be empty, use `piecewise_MLE` with `save_pred = true`") : nothing
     return loglikelihood(res.pred, res.ranges, data_set, noisedistrib)
 end
@@ -183,7 +190,7 @@ $(SIGNATURES)
     We distinguish between R2 for log transformed values (with `dist::MvLogNormal` as last argument) 
     and standard R2, to discard non positive values in the former case.
 """
-function R2(odedata, pred, ::MvLogNormal)
+function R2(odedata::AbstractArray, pred::AbstractArray, ::MvLogNormal)
     rsstot = log.(odedata) .- mean(log.(odedata), dims=1)
     rssreg = log.(pred) .- log.(odedata)
 
@@ -195,7 +202,7 @@ function R2(odedata, pred, ::MvLogNormal)
     return R2
 end
 
-function R2(odedata, pred)
+function R2(odedata::AbstractArray, pred::AbstractArray)
     rsstot = odedata .- mean(odedata, dims=1)
     rssreg = pred .- odedata
 
@@ -205,5 +212,15 @@ function R2(odedata, pred)
     return R2
 end
 
-R2(inf_res::InferenceResult, odedata, distrib) = R2(inf_res.res.pred, odedata, distrib)
-
+function R2(inf_res::InferenceResult, data_set::AbstractArray, args...) 
+    pred = inf_res.res.pred
+    ranges = inf_res.res.ranges
+    if typeof(pred) <: Vector{Vector{Array{T}}} where T # for independent time series
+        error("Function to yet implemented from `ResultMLE` with Independent time series")
+    else
+        pred_all_batches = cat( [pred[i] for (i,rng) in enumerate(ranges)]..., dims=2)
+        data_all_batches = cat( [data_set[:,rng] for (i,rng) in enumerate(ranges)]..., dims=2)
+        logl = R2(pred_all_batches, data_all_batches, args...)
+    end
+    return logl
+end

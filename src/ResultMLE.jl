@@ -43,7 +43,7 @@ function construct_inference_result(m::Model, res::RES) where {Model<:AbstractMo
     return InferenceResult(SciMLBase.remake(m, mp = mp),res) #/!\ new{Model,RES}( is required! 
 end
 
-get_p_trained(res::InferenceResult) = res.m.p
+get_p_trained(res::InferenceResult) = res.m.mp.p
 
 # function construct_result(cm::CM, res::RES) where {CM <: ComposableModel, RES}
 #     _ps = res.p_trained
