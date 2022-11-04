@@ -35,9 +35,12 @@ $(SIGNATURES)
 
 Uses bijectors to make sure to obtain correct parameter values
 """
-function construct_result(m::Model, res::RES) where {Model<:AbstractModel, RES}
-    params_trained = res.p_trained |> m.mp.st
-    return InferenceResult(remake(m,p=params_trained),res) #/!\ new{Model,RES}( is required! 
+function construct_inference_result(m::Model, res::RES) where {Model<:AbstractModel, RES}
+    p_trained = inverse(get_st(m))(res.p_trained) # projecting p in true parameter space
+    p_tuple = get_re(m)(p_trained) # transforming in tuple
+    mp = get_mp(m)
+    mp = ParametricModels.remake(mp, p = p_tuple)
+    return InferenceResult(SciMLBase.remake(m, mp = mp),res) #/!\ new{Model,RES}( is required! 
 end
 
 get_p_trained(res::InferenceResult) = res.m.p

@@ -77,3 +77,9 @@ end
     #TODO: to implement
     # @test (AIC(res, ode_datas, diagm(ones(length(p_init)))) isa Number)
 end
+
+@testset "InferenceResult" begin
+    p_trained = randn(get_plength(model))
+    res = ResultMLE(p_trained = p_trained)
+    @test construct_result(model, res) isa InferenceResult
+end

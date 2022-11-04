@@ -17,6 +17,7 @@ module PiecewiseInference
 
     using ParametricModels
     using Optimisers
+    using Bijectors, SciMLBase
 
     # parametric function
     abstract type ParamFun{N} end
@@ -35,7 +36,7 @@ module PiecewiseInference
     end
 
     export ForwardDiffSensitivity # from DiffEqSensitivity
-    export ParamFun, ResultMLE, InferenceResult
+    export ParamFun, ResultMLE, InferenceResult, construct_inference_result
     export group_ranges, AIC, AICc, AICc_TREE, moments!, moments, divisors
     export piecewise_loss
     export piecewise_MLE, piecewise_ML_indep_TS, iterative_piecewise_MLE, get_ranges
