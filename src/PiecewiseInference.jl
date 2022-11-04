@@ -16,7 +16,8 @@ module PiecewiseInference
     using Statistics, Distributions
 
     using ParametricModels
-    using Optimisers
+    using Optimisers, Flux
+    using IterTools: ncycle 
     using Bijectors, SciMLBase
 
     # parametric function

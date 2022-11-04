@@ -38,7 +38,8 @@ loss_function(data, params, pred, rg) = sum(abs2, data - pred)
                         tsteps, 
                         model, 
                         loss_function, 
-                        ranges, 
+                        ranges,
+                        1:length(ranges), # idx_ranges
                         sensealg = ForwardDiffSensitivity())
     @test isa(l, Number)
     @test isa(pred, Vector)
@@ -51,6 +52,7 @@ end
                         model, 
                         loss_function, 
                         ranges, 
+                        1:length(ranges), # idx_ranges
                         sensealg = ForwardDiffSensitivity())[1]
     l = _loss(θ)
     mygrad = ForwardDiff.gradient(_loss, θ)

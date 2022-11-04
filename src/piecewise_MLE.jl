@@ -136,6 +136,7 @@ function _piecewise_MLE(;p_init,
                         p_labs = nothing,
                         threshold = 1e-16,
                         save_pred = true, 
+                        batchsize = length(ranges),
                         kwargs...
                         )
     dim_prob = get_dims(model) #used by loss_nm
@@ -144,13 +145,14 @@ function _piecewise_MLE(;p_init,
     p_init = get_st(model)(p_init) # projecting p_init in optimization space
 
     # piecewise loss
-    function _loss(θ)
+    function _loss(θ, idx_rngs)
         return piecewise_loss(θ, 
                             data_set, 
                             tsteps, 
                             model, 
                             (data, params, pred, rg) -> loss_fn(data, params, pred, rg, ic_term),
-                            ranges;
+                            ranges,
+                            idx_rngs;
                             continuity_term = continuity_term, 
                             kwargs...)
     end
@@ -202,18 +204,21 @@ function _piecewise_MLE(;p_init,
     losses = Float64[]
     # Container to track the parameter evolutions
     θs = Float64[]
+    idx_ranges = (1:length(ranges),) |> collect
 
 
     @info "Training started"
-    objectivefun = OptimizationFunction((x,p) -> _loss(x), Optimization.AutoForwardDiff())
+    # TODO: here, not sure whether we use sensealg or not!
+    objectivefun = OptimizationFunction((x, p, idx_ranges) -> _loss(x, idx_ranges), Optimization.AutoForwardDiff())
     opt = first(optimizers)
 
     @info "Running optimizer $(typeof(opt))"
+    train_loader = Flux.Data.DataLoader(idx_ranges; batchsize, shuffle = true)
     optprob = Optimization.OptimizationProblem(objectivefun, θ)
-    res = Optimization.solve(optprob, opt, callback=callback, maxiters = first(epochs))
-    for(i, opt) in enumerate(optimizers[2:end])
+    res = Optimization.solve(optprob, opt, ncycle(train_loader, epochs[1]), callback=callback)
+    for (i, opt) in enumerate(optimizers[2:end])
         @info "Running optimizer $(typeof(opt))"
-        res = Optimization.solve(remake(optprob, u0=res.minimizer), opt, callback=callback, maxiters = epochs[i+1])
+        res = Optimization.solve(remake(optprob, u0=res.minimizer), opt, ncycle(train_loader, epochs[i+1]), callback=callback)
     end
     minloss, pred = _loss(res.minimizer)
     p_trained = _get_param(res.minimizer, nb_group, dim_prob) |> collect

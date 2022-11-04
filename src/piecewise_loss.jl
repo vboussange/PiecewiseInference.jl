@@ -30,7 +30,8 @@ function piecewise_loss(
     model::AbstractModel,
     loss_function,
     continuity_loss,
-    ranges::AbstractArray;
+    ranges::AbstractArray,
+    idx_rngs;
     continuity_term::Real=0,
     kwargs...
 )
@@ -44,7 +45,8 @@ function piecewise_loss(
     # Calculate multiple shooting loss
     loss = zero(eltype(θ))
     group_predictions = Vector{Array{eltype(θ)}}(undef, length(ranges))
-    for (i, rg) in enumerate(ranges)
+    for i in idx_rngs
+        rg = ranges[i]
         u0_i = u0s[i] # taking absolute value, assuming populations cannot be negative
         data = ode_data[:, rg]
         sol = simulate(model;
@@ -77,7 +79,8 @@ function piecewise_loss(
     tsteps::AbstractArray,
     model::AbstractModel,
     loss_function::Function,
-    ranges::AbstractArray;
+    ranges::AbstractArray,
+    idx_rngs;
     kwargs...,
 )
 
@@ -88,7 +91,8 @@ function piecewise_loss(
             model,
             loss_function,
             _default_continuity_loss,
-            ranges::AbstractArray;
+            ranges,
+            idx_rngs;
             kwargs...,
         )
 end

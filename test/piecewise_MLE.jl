@@ -31,7 +31,7 @@ ode_data = Array(sol_data)
 optimizers = [Adam(0.001)]
 epochs = [5000]
 
-@testset "piecewise MLE" begin
+# @testset "piecewise MLE" begin
     res = piecewise_MLE(p_init = p_init, 
                         group_size = 101, 
                         data_set = ode_data, 
@@ -41,7 +41,7 @@ epochs = [5000]
                         optimizers = optimizers,
                         )
     @test all(isapprox.(res.p_trained, p_true[:b], atol = 1e-4 ))
-end
+# end
 
 
 @testset "MLE 1 group" begin
