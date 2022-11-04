@@ -220,6 +220,7 @@ function _piecewise_MLE(;p_init,
         @info "Running optimizer $(typeof(opt))"
         res = Optimization.solve(remake(optprob, u0=res.minimizer), opt, ncycle(train_loader, epochs[i+1]), callback=callback)
     end
+    # TODO: victor, you stopped here on 04th of November
     minloss, pred = _loss(res.minimizer)
     p_trained = _get_param(res.minimizer, nb_group, dim_prob) |> collect
     u0s_trained = _get_u0s(res.minimizer, nb_group, dim_prob)
