@@ -81,5 +81,5 @@ end
 @testset "InferenceResult" begin
     p_trained = randn(get_plength(model))
     res = ResultMLE(p_trained = p_trained)
-    @test construct_result(model, res) isa InferenceResult
+    @test construct_inference_result(model, res) isa InferenceResult
 end
