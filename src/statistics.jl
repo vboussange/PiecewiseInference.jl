@@ -6,7 +6,7 @@ Computes the RSS of `res` given `data_set`.
 # Argument:
 - `fn` is set to `identity` but can be e.g. `log` if lognormal loss used.
 """
-function RSS(res::ResultMLE, data_set::Array, noisedistrib::T)
+function RSS(res::ResultMLE, data_set::Array, noisedistrib::T) where T <: Sampleable
     if typeof(noisedistrib) isa MvNormal
         fn = identity
     elseif typeof(noisedistrib) isa MvLogNormal
@@ -38,6 +38,8 @@ It can be `:MvLogNormal` or `:MvNormal` (comprising the multivariate types)
 # loglikelihood `ResultMLE` instead of `InferenceResult` cannot simulate model because it does not store it.
 # Hence it needs to store the predictions.
 # This should be fixed in the future
+loglikelihood(inf_res::InferenceResult, data_set::Array, noisedistrib::Sampleable) = loglikelihood(inf_res.res, data_set, noisedistrib)
+
 function loglikelihood(res::ResultMLE, data_set::Array, noisedistrib::Sampleable)
     isempty(res.pred) ? error("`res.pred` should not be empty, use `piecewise_MLE` with `save_pred = true`") : nothing
     return loglikelihood(res.pred, res.ranges, data_set, noisedistrib)
