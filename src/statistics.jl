@@ -35,11 +35,6 @@ $(SIGNATURES)
 - `noisedistrib` corresponds to the assumed distribution of the noise. 
 It can be `:MvLogNormal` or `:MvNormal` (comprising the multivariate types)
 """
-# loglikelihood `ResultMLE` instead of `InferenceResult` cannot simulate model because it does not store it.
-# Hence it needs to store the predictions.
-# This should be fixed in the future
-loglikelihood(inf_res::InferenceResult, data_set::Array, noisedistrib::Sampleable) = loglikelihood(inf_res.res, data_set, noisedistrib)
-
 function loglikelihood(res::ResultMLE, data_set::Array, noisedistrib::Sampleable)
     isempty(res.pred) ? error("`res.pred` should not be empty, use `piecewise_MLE` with `save_pred = true`") : nothing
     return loglikelihood(res.pred, res.ranges, data_set, noisedistrib)
@@ -93,7 +88,8 @@ function loglikelihood(res::InferenceResult,
     p = p |> res.m.mp.st
     θ = [u0s...;p] 
     loss_fn(data, params, pred, rg) = PiecewiseInference.loglikelihood(pred, data, noisedistrib)
-    l, _ = piecewise_loss(θ, ode_data, get_kwargs(res.m)[:saveat], res.m, loss_fn, res.res.ranges; continuity_term=0.)
+    idx_rngs = 1:length(res.res.ranges)
+    l, _ = piecewise_loss(θ, ode_data, get_kwargs(res.m)[:saveat], res.m, loss_fn, res.res.ranges, idx_rngs; continuity_term=0.)
     return l
 end
 

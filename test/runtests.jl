@@ -7,6 +7,7 @@ using Distributions
 
 @testset "PiecewiseInference" begin
     # include("FIM.jl")
+    include("utils.jl")
     include("ResultMLE.jl")
     include("piecewise_loss.jl")
     include("piecewise_MLE.jl")

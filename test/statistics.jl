@@ -45,7 +45,9 @@ true_data = sol |> Array
     @test isapprox(L_mb, L_ec)
 
     # test loglikelihood from InferenceResult
-    inf_res = InferenceResult(mymodel, ResultMLE(p_trained = p_true, u0s_trained=[u0], ranges = [1:length(tsteps)]))
+    inf_res = InferenceResult(mymodel, ResultMLE(p_trained = p_true, 
+                                                u0s_trained=[u0], 
+                                                ranges = [1:length(tsteps)]))
     L_ec = PiecewiseInference.loglikelihood(inf_res, odedata, dist)
     @test isapprox(L_mb, L_ec)
 end

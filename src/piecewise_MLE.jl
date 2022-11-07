@@ -14,18 +14,19 @@ end
 """
 $(SIGNATURES)
 
-Inference with piecewiseing. Loops through the optimizers `optimizers`.
-Returns `minloss, p_trained, ranges, losses, θs`.
+Piecewise inference. Loops through the optimizers `optimizers`.
+Returns a `ResultMLE`.
 
-# arguments
-- opt : array of optimizers
-- p_init : initial guess for parameters of `model`
-- group_size : size of segments
-- data_set : data
-- model : ODE problem for the state variables.
-- tsteps : corresponding to data
+# Arguments
+- `opt` : array of optimizers
+- `p_init` : initial guess for parameters of `model`
+- `group_size` : size of segments
+- `group_nb`: alternatively to `group_size`, one can ask for a certain number of segments
+- `data_set` : data
+- `model` : a `ParametricModel`, from ParametricModels.jl.
+- `tsteps` : corresponding to data
 
-# optional
+# Optional
 - `loss_fn` : the loss function, that takes as arguments `loss_fn(data, params, pred, rg, ic_term)` where 
     `data` is the training data, `params` is the parameter of the model (for defining priors)
     pred` corresponds to the predicted state variables, `rg` corresponds
@@ -34,7 +35,8 @@ Returns `minloss, p_trained, ranges, losses, θs`.
     `h` that maps the state variables to the observables. By default, `h` is taken as the identity.
 - `u0_init` : if not provided, we initialise from `data_set`
 - `optimizers` : array of optimizers, e.g. `[Adam(0.01)]`
-- `epochs` : number of epochs, which length should match with `optimizers`
+- `epochs` : number of epochs, which length should match that of `optimizers`
+- `batchsize`: array of batch size, which length should match that of `optimizers`
 - `continuity_term` : weight on continuity conditions
 - `ic_term` : weight on initial conditions
 - `verbose_loss` : displaying loss
@@ -43,13 +45,58 @@ Returns `minloss, p_trained, ranges, losses, θs`.
 - `info_per_its` = 50,
 - `cb` : call back function.
     Must be of the form `cb(θs, p_trained, losses, pred, ranges)`
-- `p_true` : true params
-- `p_labs` : labels of the true parameters
 - `threshold` : default to 1e-6
+
+# Examples
+```julia
+
+using LinearAlgebra, ParametricModels, DiffEqSensitivity
+using UnPack
+using OptimizationOptimisers, OptimizationFlux
+using PiecewiseInference
+
+@model MyModel
+function (m::MyModel)(du, u, p, t)
+    @unpack b = p
+    du .=  0.1 .* u .* ( 1. .- b .* u) 
+end
+
+tsteps = 1.:0.5:100.5
+tspan = (tsteps[1], tsteps[end])
+
+p_true = (b = [0.23, 0.5],)
+p_init= (b = [1., 2.],)
+
+u0 = ones(2)
+mp = ModelParams(p_true, 
+                tspan,
+                u0, 
+                BS3(),
+                sensealg = ForwardDiffSensitivity();
+                saveat = tsteps, 
+                )
+model = MyModel(mp)
+sol_data = simulate(model)
+ode_data = Array(sol_data)
+optimizers = [ADAM(0.001)]
+epochs = [5000]
+group_nb = 2
+batchsize = [1]
+res = piecewise_MLE(p_init = p_init, 
+                    group_nb = group_nb, 
+                    data_set = ode_data, 
+                    model = model, 
+                    tsteps = tsteps, 
+                    epochs = epochs, 
+                    optimizers = optimizers,
+                    batchsize = batchsize,
+                    )
+```
 """
-function piecewise_MLE(;group_size::Int,  kwargs...)
+function piecewise_MLE(;group_size = nothing, group_nb = nothing,  kwargs...)
     datasize = size(kwargs[:data_set],2)
-    _piecewise_MLE(;ranges=get_ranges(group_size, datasize),  kwargs...)
+    ranges = get_ranges(;group_size, group_nb, datasize)
+    _piecewise_MLE(;ranges,  kwargs...)
 end
 
 """
@@ -60,7 +107,8 @@ is a vector containing the independent arrays corresponding to the time series,
 and `tsteps` is a vector where each entry contains the time steps
 of the corresponding time series.
 """
-function piecewise_ML_indep_TS(;group_size::Int,
+function piecewise_ML_indep_TS(;group_size = nothing, 
+                                group_nb = nothing,
                                 data_set::Vector, #many different initial conditions
                                 tsteps::Vector, #corresponding time steps
                                 save_pred = true, # saving prediction
@@ -69,7 +117,7 @@ function piecewise_ML_indep_TS(;group_size::Int,
     @assert all(size(data_set[1],1) .== size.(data_set, 1)) "Independent time series must have same state variable dimension"
 
     datasize_arr = size.(data_set,2)
-    ranges_arr = [get_ranges(group_size, datasize_arr[i]) for i in 1:length(data_set)]
+    ranges_arr = [get_ranges(;group_size, group_nb, datasize = datasize_arr[i]) for i in 1:length(data_set)]
     # updating to take into account the shift provoked by concatenating independent TS
     ranges_shift = cumsum(datasize_arr) # shift
     for i in 2:length(ranges_arr)
@@ -89,7 +137,7 @@ function piecewise_ML_indep_TS(;group_size::Int,
         # NOTE: we could have continuity within a time series, this must be carefully thought out.
         
     # reconstructing the problem with original format
-    ranges_arr = [get_ranges(group_size, datasize_arr[i]) for i in 1:length(data_set)]
+    ranges_arr = [get_ranges(;group_size, group_nb, datasize = datasize_arr[i]) for i in 1:length(data_set)]
     idx_res = [0;cumsum(length.(ranges_arr))]
 
     # group u0s in vector of u0s, 
@@ -136,7 +184,7 @@ function _piecewise_MLE(;p_init,
                         p_labs = nothing,
                         threshold = 1e-16,
                         save_pred = true, 
-                        batchsize = length(ranges),
+                        batchsize = fill(length(ranges),2),
                         kwargs...
                         )
     dim_prob = get_dims(model) #used by loss_nm
@@ -204,7 +252,7 @@ function _piecewise_MLE(;p_init,
     losses = Float64[]
     # Container to track the parameter evolutions
     θs = Float64[]
-    idx_ranges = (1:length(ranges),) |> collect
+    idx_ranges = (1:length(ranges),)
 
 
     @info "Training started"
@@ -213,19 +261,25 @@ function _piecewise_MLE(;p_init,
     opt = first(optimizers)
 
     @info "Running optimizer $(typeof(opt))"
-    train_loader = Flux.Data.DataLoader(idx_ranges; batchsize, shuffle = true)
     optprob = Optimization.OptimizationProblem(objectivefun, θ)
+    train_loader = Flux.Data.DataLoader(idx_ranges; batchsize = batchsize[1], shuffle = true)
     res = Optimization.solve(optprob, opt, ncycle(train_loader, epochs[1]), callback=callback)
     for (i, opt) in enumerate(optimizers[2:end])
         @info "Running optimizer $(typeof(opt))"
-        res = Optimization.solve(remake(optprob, u0=res.minimizer), opt, ncycle(train_loader, epochs[i+1]), callback=callback)
+        train_loader = Flux.Data.DataLoader(idx_ranges; batchsize = batchsize[i+1], shuffle = true)
+        res = Optimization.solve(remake(optprob, u0=res.minimizer), 
+                                opt, 
+                                ncycle(train_loader, epochs[i+1]), 
+                                callback=callback, 
+                                save_best=false)
     end
-    # TODO: victor, you stopped here on 04th of November
-    minloss, pred = _loss(res.minimizer)
+    
+    minloss, pred = _loss(res.minimizer, idx_ranges...)
     p_trained = _get_param(res.minimizer, nb_group, dim_prob) |> collect
     u0s_trained = _get_u0s(res.minimizer, nb_group, dim_prob)
 
-    @info "Minimum loss: $minloss"
+
+    @info "Minimum loss for all batches: $minloss"
     if !isnothing(cb)
         cb(θs, p_trained, losses, pred, ranges)
     end
@@ -260,17 +314,31 @@ end
 """
 $(SIGNATURES)
 """
-function get_ranges(group_size, datasize)
-    if group_size-1 < datasize
-        ranges = group_ranges(datasize, group_size)
-        # piecewiseing
-    else
-        ranges = [1:datasize]
-        # normal MLE with initial estimation
-    end
-    return ranges
-end
+function get_ranges(;group_size = nothing, group_nb = nothing, datasize)
 
+    if !isnothing(group_size)
+        if group_size-1 < datasize
+            ranges = group_ranges_gs(datasize, group_size)
+            # piecewiseing
+        else
+            ranges = [1:datasize]
+            # normal MLE with initial estimation
+        end
+        return ranges
+    elseif !isnothing(group_nb)
+        if group_nb > 1
+            ranges = group_ranges_gn(datasize, group_nb)
+            # piecewiseing
+        else
+            ranges = [1:datasize]
+            # normal MLE with initial estimation
+        end
+        return ranges
+    else 
+        ArgumentError("Need to provide whether `group_nb` or `group_size` as keyword argument")
+    end
+    
+end
 
 """
 $(SIGNATURES)
@@ -289,7 +357,8 @@ For kwargs, see `piecewise_MLE`.
 - `group_sizes` : array of group sizes to test
 - `optimizers_array`: optimizers_array[i] is an array of optimizers for the trainging processe of `group_sizes[i`
 """
-function iterative_piecewise_MLE(;group_sizes,
+function iterative_piecewise_MLE(;group_sizes = nothing,
+                                group_nbs = nothing,
                                 optimizers_array,
                                 threshold = 1e-16,
                                 kwargs...)
@@ -301,9 +370,17 @@ function iterative_piecewise_MLE(;group_sizes,
     datasize = size(data_set,2)
     res = ResultMLE(pred = [data_set], ranges = [1:datasize])
     res_array = ResultMLE[]
-    for (i,gs) in enumerate(group_sizes)
-        println("***************\nIterative training with group size $gs\n***************")
-        ranges = get_ranges(group_sizes[i], datasize)
+
+    if !isnothing(group_sizes)
+        ranges_arr = [get_ranges(; group_size = gs, datasize) for gs in group_sizes]
+    elseif !isnothing(group_nbs)
+        ranges_arr = [get_ranges(; group_nb = gn, datasize) for gn in group_numbers]
+    else
+        ArgumentError("Provide whether `group_sizes` or `group_nbs` keyword arguments")
+    end
+    for (i,ranges) in enumerate(ranges_arr)
+        println("***************\nIterative training with $(length(ranges)) segment(s)\n***************")
+
         u0s_init = _initialise_u0s_iterative_piecewise_ML(res.pred,res.ranges,ranges)
         tempres = _piecewise_MLE(;ranges = ranges, 
                                 optimizers = optimizers_array[i],

@@ -19,14 +19,24 @@ julia> group_ranges(10, 5)
  9:10
 ```
 """
-function group_ranges(datasize::Integer, groupsize::Integer)
-    2 <= groupsize <= datasize || throw(
+function group_ranges_gs(datasize::Integer, group_size::Integer)
+    2 <= group_size <= datasize || throw(
         DomainError(
-            groupsize,
-            "datasize must be positive and groupsize must to be within [2, datasize]",
+            group_size,
+            "datasize must be positive and group_size must to be within [2, datasize]",
         ),
     )
-    return [i:min(datasize, i + groupsize - 1) for i in 1:groupsize-1:datasize-1]
+    return [i:min(datasize, i + group_size - 1) for i in 1:group_size-1:datasize-1]
+end
+
+"""
+$(SIGNATURES)
+
+    Similar to `group_ranges`, except that it takes as arguments the nb of groups wanted, `group_nb`
+"""
+function group_ranges_gn(datasize::Integer, group_nb::Integer)
+    group_size = ceil(Integer, datasize/group_nb) + 1
+    group_ranges_gs(datasize, group_size)
 end
 
 """
