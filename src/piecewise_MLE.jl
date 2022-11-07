@@ -194,6 +194,7 @@ function _piecewise_MLE(;p_init,
     @assert length(optimizers) == length(epochs)
     p_init, _ = Optimisers.destructure(p_init)
     p_init = get_st(model)(p_init) # projecting p_init in optimization space
+    idx_ranges = (1:length(ranges),)
 
     # piecewise loss
     function _loss(θ, idx_rngs)
@@ -207,6 +208,7 @@ function _piecewise_MLE(;p_init,
                             continuity_term = continuity_term, 
                             kwargs...)
     end
+    __loss(x, p, idx_rngs=idx_ranges...) = _loss(x, idx_rngs) #used for the "Optimization function"
 
     # initialising with data_set if not provided
     if isnothing(u0s_init) 
@@ -255,26 +257,18 @@ function _piecewise_MLE(;p_init,
     losses = Float64[]
     # Container to track the parameter evolutions
     θs = Float64[]
-    idx_ranges = (1:length(ranges),)
 
 
     @info "Training started"
     # TODO: here, not sure whether we use sensealg or not!
-    objectivefun = OptimizationFunction((x, p, idx_ranges) -> _loss(x, idx_ranges), Optimization.AutoForwardDiff())
-    opt = first(optimizers)
 
-    @info "Running optimizer $(typeof(opt))"
+    objectivefun = OptimizationFunction(__loss, Optimization.AutoForwardDiff())
+    opt = first(optimizers)
     optprob = Optimization.OptimizationProblem(objectivefun, θ)
-    train_loader = Flux.Data.DataLoader(idx_ranges; batchsize = batchsize[1], shuffle = true)
-    res = Optimization.solve(optprob, opt, ncycle(train_loader, epochs[1]), callback=callback)
+    res = __solve(opt, optprob, idx_ranges, batchsize[1], epochs[1], callback)
     for (i, opt) in enumerate(optimizers[2:end])
-        @info "Running optimizer $(typeof(opt))"
-        train_loader = Flux.Data.DataLoader(idx_ranges; batchsize = batchsize[i+1], shuffle = true)
-        res = Optimization.solve(remake(optprob, u0=res.minimizer), 
-                                opt, 
-                                ncycle(train_loader, epochs[i+1]), 
-                                callback=callback, 
-                                save_best=false)
+        optprob = remake(optprob, u0=res.minimizer)
+        res = __solve(optimizers[i+1], optprob, idx_ranges, batchsize[i+1], epochs[i+1], res.minimizer, callback)
     end
     
     minloss, pred = _loss(res.minimizer, idx_ranges...)
@@ -421,4 +415,26 @@ function _initialise_u0s_iterative_piecewise_ML(pred, ranges_pred, ranges_2)
         end
     end
     return u0_2
+end
+
+function __solve(opt::OPT, optprob, idx_ranges, batchsize, epochs, callback) where OPT <: Union{Optim.AbstractOptimizer, 
+                                                                                                Optim.Fminbox,
+                                                                                                Optim.SAMIN, 
+                                                                                                Optim.ConstrainedOptimizer}
+    @info "Running optimizer $OPT"
+    @assert batchsize == length(idx_ranges...) "$OPT is not compatible with mini-batches - use `batchsize = group_nb`"
+    res = Optimization.solve(optprob,
+                            opt,
+                            maxiters = epochs, 
+                            callback = callback)
+end
+
+function __solve(opt::OPT, optprob, idx_ranges, batchsize, epochs, callback) where OPT
+    @info "Running optimizer $OPT"
+    train_loader = Flux.Data.DataLoader(idx_ranges; batchsize = batchsize, shuffle = true)
+    res = Optimization.solve(optprob,
+                            opt, 
+                            ncycle(train_loader, epochs), 
+                            callback=callback, 
+                            save_best=true)
 end

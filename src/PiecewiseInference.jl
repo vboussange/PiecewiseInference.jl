@@ -6,6 +6,7 @@ module PiecewiseInference
     using ParametricModels
     using OrdinaryDiffEq
     using Optimization
+    using OptimizationOptimJL:Optim
     using Requires
     using DocStringExtensions
 

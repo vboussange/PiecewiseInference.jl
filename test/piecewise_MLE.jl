@@ -1,7 +1,7 @@
 using LinearAlgebra, ParametricModels, OrdinaryDiffEq, DiffEqSensitivity
 using Bijectors: Exp, inverse, Identity, Stacked
 using UnPack
-using OptimizationOptimisers, OptimizationFlux
+using OptimizationOptimisers, OptimizationFlux, OptimizationOptimJL
 using Test
 using PiecewiseInference
 
@@ -75,6 +75,21 @@ batchsize = [2]
 end
 
 @testset "MLE 1 group" begin
+    ode_data_wnoise = ode_data .+ randn(size(ode_data)) .* 0.1
+    res = piecewise_MLE(p_init = p_init, 
+                        group_nb = 1, 
+                        data_set = ode_data_wnoise, 
+                        model = model, 
+                        tsteps = tsteps, 
+                        epochs = epochs, 
+                        optimizers = optimizers,
+                        )
+    @test all( isapprox.(res.p_trained, p_true[:b], rtol = 1e-1))
+end
+
+@testset "MLE 1 group, LBFGS" begin
+    optimizers = [LBFGS()]
+    epochs = [5000]
     ode_data_wnoise = ode_data .+ randn(size(ode_data)) .* 0.1
     res = piecewise_MLE(p_init = p_init, 
                         group_nb = 1, 
