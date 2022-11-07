@@ -89,75 +89,75 @@ end
 end
 
 
-# TODO: confidence intervals tests not implemented
-@testset "confidence intervals normally distributed noise" begin
-    σ_estim(L, N, M) = exp(-(2 * L / N / M + 1)) / 2 / pi
+# # TODO: confidence intervals tests not implemented
+# @testset "confidence intervals normally distributed noise" begin
+#     σ_estim(L, N, M) = exp(-(2 * L / N / M + 1)) / 2 / pi
 
-    N = 2
-    p_init = [0.5, 1., 0.2, 0.2]
-    tspan = (0.,15.)
-    u0_init = [0.1, 0.15]
-    tsteps = range(tspan[1], tspan[end], length=1000)
-    mymodel = ModelLog(ModelParams(N=N,
-                                p = p_init,
-                                u0 = u0_init,
-                                tspan = tspan,
-                                alg = BS3(),
-                                kwargs_sol = Dict(:saveat => tsteps,)),
-                                (Identity{0}(), Identity{0}()))
-    sol = simulate(mymodel)
-    true_data = sol |> Array
+#     N = 2
+#     p_init = [0.5, 1., 0.2, 0.2]
+#     tspan = (0.,15.)
+#     u0_init = [0.1, 0.15]
+#     tsteps = range(tspan[1], tspan[end], length=1000)
+#     mymodel = ModelLog(ModelParams(N=N,
+#                                 p = p_init,
+#                                 u0 = u0_init,
+#                                 tspan = tspan,
+#                                 alg = BS3(),
+#                                 kwargs_sol = Dict(:saveat => tsteps,)),
+#                                 (Identity{0}(), Identity{0}()))
+#     sol = simulate(mymodel)
+#     true_data = sol |> Array
 
-    σ = 1000.0
-    odedata = true_data + σ * randn(size(true_data)...)
+#     σ = 1000.0
+#     odedata = true_data + σ * randn(size(true_data)...)
 
-    res = ResultEconobio(mymodel,ResultMLE(p_trained = p_init, u0s_trained=[u0_init], ranges = [1:length(tsteps)]))
-    L_ec(p) = - Econobio.loglikelihood(res, odedata, 1. .* LinearAlgebra.I; loglike_fn = MiniBatchInference.loglikelihood_normal, p = p)
-    numerical_hessian = ForwardDiff.hessian(L_ec, p_init)
-    var_cov_matrix = inv(numerical_hessian)
-    display(var_cov_matrix)
-    t_stats = p_init ./ sqrt.(-diag(var_cov_matrix))    
-end
+#     res = ResultEconobio(mymodel,ResultMLE(p_trained = p_init, u0s_trained=[u0_init], ranges = [1:length(tsteps)]))
+#     L_ec(p) = - Econobio.loglikelihood(res, odedata, 1. .* LinearAlgebra.I; loglike_fn = MiniBatchInference.loglikelihood_normal, p = p)
+#     numerical_hessian = ForwardDiff.hessian(L_ec, p_init)
+#     var_cov_matrix = inv(numerical_hessian)
+#     display(var_cov_matrix)
+#     t_stats = p_init ./ sqrt.(-diag(var_cov_matrix))    
+# end
 
-@testset "confidence intervals lognormally distributed noise" begin
+# @testset "confidence intervals lognormally distributed noise" begin
 
-    N = 2
-    p_init = [0.5, 1., 0.2, 0.2]
-    tspan = (0.,15.)
-    u0_init = [0.1, 0.15]
-    tsteps = range(tspan[1], tspan[end], length=1000)
-    mymodel = ModelLog(ModelParams(N=N,
-                                p = p_init,
-                                u0 = u0_init,
-                                tspan = tspan,
-                                alg = BS3(),
-                                kwargs_sol = Dict(:saveat => tsteps,)),
-                                (Identity{0}(), Identity{0}()))
-    sol = simulate(mymodel)
-    true_data = sol |> Array
+#     N = 2
+#     p_init = [0.5, 1., 0.2, 0.2]
+#     tspan = (0.,15.)
+#     u0_init = [0.1, 0.15]
+#     tsteps = range(tspan[1], tspan[end], length=1000)
+#     mymodel = ModelLog(ModelParams(N=N,
+#                                 p = p_init,
+#                                 u0 = u0_init,
+#                                 tspan = tspan,
+#                                 alg = BS3(),
+#                                 kwargs_sol = Dict(:saveat => tsteps,)),
+#                                 (Identity{0}(), Identity{0}()))
+#     sol = simulate(mymodel)
+#     true_data = sol |> Array
   
 
-    σ = 100.
-    odedata = true_data .* exp.(σ * randn(size(true_data)...))
+#     σ = 100.
+#     odedata = true_data .* exp.(σ * randn(size(true_data)...))
 
-    # using PyPlot
-    # fig = figure()
-    # plot(true_data')
-    # display(fig)
-    # plot(odedata', linestyle = ":")
-    # display(fig)
+#     # using PyPlot
+#     # fig = figure()
+#     # plot(true_data')
+#     # display(fig)
+#     # plot(odedata', linestyle = ":")
+#     # display(fig)
 
-    # @test pdf(MvLogNormal(zeros(2), sigma^2 * LinearAlgebra.I), 2 * ones(2)) ≈ pdf(LogNormal(0,sigma),2.)^2
+#     # @test pdf(MvLogNormal(zeros(2), sigma^2 * LinearAlgebra.I), 2 * ones(2)) ≈ pdf(LogNormal(0,sigma),2.)^2
 
-    res = ResultEconobio(mymodel,ResultMLE(p_trained = p_init, u0s_trained=[u0_init], ranges = [1:length(tsteps)]))
-    L_ec(p) = Econobio.loglikelihood(res, odedata, σ; loglike_fn = MiniBatchInference.loglikelihood_lognormal, p = p)
-    using ForwardDiff
-    numerical_hessian = ForwardDiff.hessian(L_ec, p_init)
-    var_cov_matrix = inv(numerical_hessian)
-    display(var_cov_matrix)
-    t_stats = p_init ./ sqrt.(-diag(var_cov_matrix))        
+#     res = ResultEconobio(mymodel,ResultMLE(p_trained = p_init, u0s_trained=[u0_init], ranges = [1:length(tsteps)]))
+#     L_ec(p) = Econobio.loglikelihood(res, odedata, σ; loglike_fn = MiniBatchInference.loglikelihood_lognormal, p = p)
+#     using ForwardDiff
+#     numerical_hessian = ForwardDiff.hessian(L_ec, p_init)
+#     var_cov_matrix = inv(numerical_hessian)
+#     display(var_cov_matrix)
+#     t_stats = p_init ./ sqrt.(-diag(var_cov_matrix))        
 
-end
+# end
 
 @testset "R2" begin
     # MvLogNormal

@@ -130,11 +130,14 @@ function piecewise_ML_indep_TS(;group_size = nothing,
     tsteps_cat = vcat(tsteps...)
 
     res = _piecewise_MLE(;ranges=ranges_cat,
-        data_set=data_set_cat, 
-        tsteps=tsteps_cat, 
-        kwargs...,
-        continuity_term = 0.,)  # this overrides kwargs, essential as it does not make sense to have continuity across indepdenent TS
-        # NOTE: we could have continuity within a time series, this must be carefully thought out.
+                        data_set=data_set_cat, 
+                        tsteps=tsteps_cat, 
+                        kwargs...,
+                        continuity_term = 0.,) 
+                        # this overrides kwargs, essential as it does not 
+                        # make sense to have continuity across indepdenent TS
+                        # NOTE: we could have continuity within a time series, 
+                        # this must be carefully thought out.
         
     # reconstructing the problem with original format
     ranges_arr = [get_ranges(;group_size, group_nb, datasize = datasize_arr[i]) for i in 1:length(data_set)]
