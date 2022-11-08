@@ -102,6 +102,22 @@ end
     @test all( isapprox.(res.p_trained, p_true[:b], rtol = 1e-1))
 end
 
+@testset "MLE 1 group, ADAM, then LBFGS" begin
+    optimizers = [ADAM(0.01), LBFGS()]
+    epochs = [1000,200]
+    batchsize = [1,2]
+    ode_data_wnoise = ode_data .+ randn(size(ode_data)) .* 0.1
+    res = piecewise_MLE(p_init = p_init, 
+                        group_nb = 2, 
+                        data_set = ode_data_wnoise, 
+                        model = model, 
+                        tsteps = tsteps, 
+                        epochs = epochs, 
+                        optimizers = optimizers,
+                        )
+    @test all( isapprox.(res.p_trained, p_true[:b], rtol = 1e-1))
+end
+
 @testset "piecewise MLE independent TS" begin
     tsteps_arr = [tsteps[1:30],tsteps[31:60],tsteps[61:90]] # 3 ≠ time steps with ≠ length
 

@@ -268,7 +268,7 @@ function _piecewise_MLE(;p_init,
     res = __solve(opt, optprob, idx_ranges, batchsize[1], epochs[1], callback)
     for (i, opt) in enumerate(optimizers[2:end])
         optprob = remake(optprob, u0=res.minimizer)
-        res = __solve(optimizers[i+1], optprob, idx_ranges, batchsize[i+1], epochs[i+1], res.minimizer, callback)
+        res = __solve(optimizers[i+1], optprob, idx_ranges, batchsize[i+1], epochs[i+1], callback)
     end
     
     minloss, pred = _loss(res.minimizer, idx_ranges...)
