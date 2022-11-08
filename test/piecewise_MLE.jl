@@ -29,7 +29,7 @@ model = MyModel(mp)
 sol_data = simulate(model)
 ode_data = Array(sol_data)
 optimizers = [ADAM(0.001)]
-epochs = [5000]
+epochs = [4000]
 group_nb = 2
 batchsize = [group_nb]
 @testset "piecewise MLE" begin
@@ -56,7 +56,7 @@ batchsize = [1]
                         optimizers = optimizers,
                         batchsize = batchsize,
                         )
-    @test all(isapprox.(res.p_trained, p_true[:b], atol = 1e-4 ))
+    @test all(isapprox.(res.p_trained, p_true[:b], atol = 1e-3 ))
 end
 
 group_nb = 3

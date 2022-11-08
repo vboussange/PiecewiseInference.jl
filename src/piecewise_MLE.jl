@@ -11,6 +11,14 @@ function _loss_multiple_shoot_init(data, params, pred, rg, ic_term)
     return l
 end
 
+#=
+    Need to overwrite the behavior of length(nc::NCcyle)
+    because it does not correspond to what we aim at
+=#
+import Base.length
+import IterTools.NCycle
+length(nc::NCycle) = nc.n
+
 """
 $(SIGNATURES)
 
@@ -434,7 +442,7 @@ function __solve(opt::OPT, optprob, idx_ranges, batchsize, epochs, callback) whe
     train_loader = Flux.Data.DataLoader(idx_ranges; batchsize = batchsize, shuffle = true)
     res = Optimization.solve(optprob,
                             opt, 
-                            ncycle(train_loader, epochs), 
+                            ncycle(train_loader, epochs),
                             callback=callback, 
                             save_best=true)
 end
