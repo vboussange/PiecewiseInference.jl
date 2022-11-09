@@ -108,7 +108,7 @@ function _get_param(θ, nb_group, dim_prob)
     return @view θ[nb_group * dim_prob + 1: end]
 end
 
-function _get_u0s(θ, nb_group, dim_prob)
+function _get_u0s(θ, nb_group, dim_prob, st)
     # @show nb_group, dim_prob
-    return [abs.(θ[dim_prob*(i-1)+1:dim_prob*i]) for i in 1:nb_group]
+    return [θ[dim_prob*(i-1)+1:dim_prob*i] for i in 1:nb_group]
 end
