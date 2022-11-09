@@ -23,7 +23,7 @@ length(nc::NCycle) = nc.n
 $(SIGNATURES)
 
 Piecewise inference. Loops through the optimizers `optimizers`.
-Returns a `ResultMLE`.
+Returns a `InferenceResult`.
 
 # Arguments
 - `opt` : array of optimizers
@@ -44,7 +44,7 @@ Returns a `ResultMLE`.
 - `u0_init` : if not provided, we initialise from `data_set`
 - `optimizers` : array of optimizers, e.g. `[Adam(0.01)]`
 - `epochs` : number of epochs, which length should match that of `optimizers`
-- `batchsize`: array of batch size, which length should match that of `optimizers`
+- `batchsizes`: array of batch size, which length should match that of `optimizers`
 - `continuity_term` : weight on continuity conditions
 - `ic_term` : weight on initial conditions
 - `verbose_loss` : displaying loss
@@ -89,7 +89,7 @@ ode_data = Array(sol_data)
 optimizers = [ADAM(0.001)]
 epochs = [5000]
 group_nb = 2
-batchsize = [1]
+batchsizes = [1]
 res = piecewise_MLE(p_init = p_init, 
                     group_nb = group_nb, 
                     data_set = ode_data, 
@@ -97,7 +97,7 @@ res = piecewise_MLE(p_init = p_init,
                     tsteps = tsteps, 
                     epochs = epochs, 
                     optimizers = optimizers,
-                    batchsize = batchsize,
+                    batchsizes = batchsizes,
                     )
 ```
 """
@@ -159,14 +159,16 @@ function piecewise_ML_indep_TS(;group_size = nothing,
         # group back the time series in vector, to have
         # pred = [ [mibibatch_1_ts_1, mibibatch_2_ts_1...],  [mibibatch_1_ts_2, mibibatch_2_ts_2...] ...]
         pred_arr = [res.pred[idx_res[i]+1:idx_res[i+1]] for i in 1:length(data_set)]
-        res_arr = ResultMLE(res.minloss,
+        res_arr = InferenceResult(res.model,
+                            res.minloss,
                             res.p_trained,
                             u0s_trained_arr, 
                             pred_arr, 
                             ranges_arr, 
                             res.losses,)
     else
-        res_arr = ResultMLE(res.minloss,
+        res_arr = InferenceResult(res.model,
+                            res.minloss,
                             res.p_trained,
                             u0s_trained_arr,
                             [], 
@@ -185,6 +187,7 @@ function _piecewise_MLE(;p_init,
                         loss_fn = _loss_multiple_shoot_init,
                         optimizers = [ADAM(0.01), BFGS(initial_stepnorm=0.01)],
                         epochs = [1000, 200],
+                        batchsizes = fill(length(ranges),length(epochs)),
                         continuity_term = 1.,
                         ic_term = 1.,
                         verbose_loss = true,
@@ -195,11 +198,10 @@ function _piecewise_MLE(;p_init,
                         p_labs = nothing,
                         threshold = 1e-16,
                         save_pred = true, 
-                        batchsize = fill(length(ranges),2),
                         kwargs...
                         )
     dim_prob = get_dims(model) #used by loss_nm
-    @assert length(optimizers) == length(epochs)
+    @assert (length(optimizers) == length(epochs) == length(batchsizes)) "`optimizers`, `epochs`, `batchsizes` must be of same length"
     p_init, _ = Optimisers.destructure(p_init)
     p_init = get_st(model)(p_init) # projecting p_init in optimization space
     idx_ranges = (1:length(ranges),)
@@ -273,10 +275,10 @@ function _piecewise_MLE(;p_init,
     objectivefun = OptimizationFunction(__loss, Optimization.AutoForwardDiff())
     opt = first(optimizers)
     optprob = Optimization.OptimizationProblem(objectivefun, θ)
-    res = __solve(opt, optprob, idx_ranges, batchsize[1], epochs[1], callback)
+    res = __solve(opt, optprob, idx_ranges, batchsizes[1], epochs[1], callback)
     for (i, opt) in enumerate(optimizers[2:end])
         optprob = remake(optprob, u0=res.minimizer)
-        res = __solve(optimizers[i+1], optprob, idx_ranges, batchsize[i+1], epochs[i+1], callback)
+        res = __solve(optimizers[i+1], optprob, idx_ranges, batchsizes[i+1], epochs[i+1], callback)
     end
     
     minloss, pred = _loss(res.minimizer, idx_ranges...)
@@ -299,14 +301,16 @@ function _piecewise_MLE(;p_init,
     end
     
     if save_pred
-        res = ResultMLE(minloss, 
+        res = InferenceResult(model,
+                        minloss, 
                         p_trained,
                         u0s_trained,
                         pred, 
                         ranges, 
                         losses)
     else
-        res = ResultMLE(minloss,
+        res = InferenceResult(model,
+                        minloss,
                         p_trained,
                         u0s_trained, 
                         [], 
@@ -351,7 +355,7 @@ $(SIGNATURES)
 Performs a iterative piecewise MLE, iterating over `group_sizes`. 
 Stops the iteration when loss function increases between two iterations.
 
-Returns an array with all `ResultMLE` obtained during the iteration.
+Returns an array with all `InferenceResult` obtained during the iteration.
 For kwargs, see `piecewise_MLE`.
 
 # Note 
@@ -373,8 +377,13 @@ function iterative_piecewise_MLE(;group_sizes = nothing,
     # initialising results
     data_set = kwargs[:data_set]
     datasize = size(data_set,2)
-    res = ResultMLE(pred = [data_set], ranges = [1:datasize])
-    res_array = ResultMLE[]
+    model = kwargs[:model]
+    p_trained, _ = destructure(kwargs[:p_init])
+    res = InferenceResult(model = model,
+                        p_trained = p_trained,
+                        pred = [data_set], 
+                        ranges = [1:datasize])
+    res_array = InferenceResult[]
 
     if !isnothing(group_sizes)
         ranges_arr = [get_ranges(; group_size = gs, datasize) for gs in group_sizes]
@@ -425,21 +434,21 @@ function _initialise_u0s_iterative_piecewise_ML(pred, ranges_pred, ranges_2)
     return u0_2
 end
 
-function __solve(opt::OPT, optprob, idx_ranges, batchsize, epochs, callback) where OPT <: Union{Optim.AbstractOptimizer, 
+function __solve(opt::OPT, optprob, idx_ranges, batchsizes, epochs, callback) where OPT <: Union{Optim.AbstractOptimizer, 
                                                                                                 Optim.Fminbox,
                                                                                                 Optim.SAMIN, 
                                                                                                 Optim.ConstrainedOptimizer}
     @info "Running optimizer $OPT"
-    @assert batchsize == length(idx_ranges...) "$OPT is not compatible with mini-batches - use `batchsize = group_nb`"
+    @assert batchsizes == length(idx_ranges...) "$OPT is not compatible with mini-batches - use `batchsizes = group_nb`"
     res = Optimization.solve(optprob,
                             opt,
                             maxiters = epochs, 
                             callback = callback)
 end
 
-function __solve(opt::OPT, optprob, idx_ranges, batchsize, epochs, callback) where OPT
+function __solve(opt::OPT, optprob, idx_ranges, batchsizes, epochs, callback) where OPT
     @info "Running optimizer $OPT"
-    train_loader = Flux.Data.DataLoader(idx_ranges; batchsize = batchsize, shuffle = true)
+    train_loader = Flux.Data.DataLoader(idx_ranges; batchsize = batchsizes, shuffle = true)
     res = Optimization.solve(optprob,
                             opt, 
                             ncycle(train_loader, epochs),

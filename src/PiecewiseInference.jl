@@ -26,7 +26,7 @@ module PiecewiseInference
     import Base.length
     length(::ParamFun{N}) where N = N
 
-    include("ResultMLE.jl")
+    include("InferenceResult.jl")
     include("utils.jl")
     include("piecewise_loss.jl")
     include("piecewise_MLE.jl")
@@ -38,7 +38,7 @@ module PiecewiseInference
     end
 
     export ForwardDiffSensitivity # from DiffEqSensitivity
-    export ParamFun, ResultMLE, InferenceResult, construct_inference_result, get_p_trained
+    export ParamFun, InferenceResult, construct_inference_result, get_p_trained
     export group_ranges, AIC, AICc, AICc_TREE, moments!, moments, divisors
     export piecewise_loss
     export piecewise_MLE, piecewise_ML_indep_TS, iterative_piecewise_MLE, get_ranges

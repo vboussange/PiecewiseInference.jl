@@ -39,20 +39,13 @@ true_data = sol |> Array
     L_mb = PiecewiseInference.loglikelihood(odedata, true_data, dist)
     @test isapprox(σ_estim(L_mb, size(odedata)...), σ^2, atol = 5e-2)
 
-    # test loglikelihood from ResultMLE
-    res = ResultMLE(p_trained = p_true, u0s_trained=[u0], ranges = [1:length(tsteps)], pred = [true_data])
-    L_ec = PiecewiseInference.loglikelihood(res, odedata, dist)
-    @test isapprox(L_mb, L_ec)
-
     # test loglikelihood from InferenceResult
-    inf_res = InferenceResult(mymodel, ResultMLE(p_trained = p_true, 
-                                                u0s_trained=[u0], 
-                                                ranges = [1:length(tsteps)]))
-    L_ec = PiecewiseInference.loglikelihood(inf_res, odedata, dist)
+    p_trained, _ = destructure(p_true)
+    res = InferenceResult(model = model, p_trained = p_trained, u0s_trained=[u0], ranges = [1:length(tsteps)], pred = [true_data])
+    L_ec = PiecewiseInference.loglikelihood(res, odedata, dist)
     @test isapprox(L_mb, L_ec)
 end
 
-# TODO: for now, not working
 @testset "likelihood lognormal" begin
     σ_estim(L, N, M, odedata) = exp(-((2 * L + sum(log.(odedata.^2))) / N / M + 1)) / 2 / pi
 
@@ -64,14 +57,10 @@ end
     L_mb = PiecewiseInference.loglikelihood(true_data, odedata, dist)
     @test isapprox(σ_estim(L_mb, size(odedata)..., true_data), σ^2, atol = 5e-2)
 
-    # test loglikelihood from ResultMLE
-    res = ResultMLE(p_trained = p_true, u0s_trained=[u0], ranges = [1:length(tsteps)], pred = [true_data])
-    L_ec = PiecewiseInference.loglikelihood(res, odedata, dist)
-    @test isapprox(L_mb, L_ec)
-
     # test loglikelihood from InferenceResult
-    inf_res = InferenceResult(mymodel, res)
-    L_ec = PiecewiseInference.loglikelihood(inf_res, odedata, dist)
+    p_trained, _ = destructure(p_true)
+    res = InferenceResult(model = model, p_trained = p_trained, u0s_trained=[u0], ranges = [1:length(tsteps)], pred = [true_data])
+    L_ec = PiecewiseInference.loglikelihood(res, odedata, dist)
     @test isapprox(L_mb, L_ec)
 end
 
@@ -86,6 +75,19 @@ end
         @test isapprox(estimate_σ(true_data,odedata, MvNormal(zeros(length(u0)))), σ, rtol = 5e-2)
     end
 
+end
+
+@testset "AIC" begin
+    σ = 0.8
+    odedata = true_data + σ * randn(size(true_data)...)
+    # test loglikelihood from InferenceResult
+    p_trained, _ = destructure(p_true)
+    res = InferenceResult(model = mymodel,
+                        p_trained = p_trained, 
+                        u0s_trained=[u0], 
+                        ranges = [1:length(tsteps)],
+                        pred = [true_data])
+    @test (AIC(res, odedata, MvNormal(zeros(length(u0)), σ^2 * LinearAlgebra.I)) isa Number)
 end
 
 

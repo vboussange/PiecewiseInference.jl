@@ -85,6 +85,6 @@ end
                         saving_dir = "figures/plotting_convergence",
                         info_per_its=100,
                         )
-    @test isa(res, ResultMLE)
+    @test isa(res, InferenceResult)
     isdir("figures") ? rm("figures", recursive=true) : nothing
 end

@@ -4,6 +4,7 @@ using UnPack
 using OptimizationOptimisers
 using Test
 using PiecewiseInference
+using Distributions
 
 @model MyModel
 function (m::MyModel)(du, u, p, t)
@@ -31,7 +32,7 @@ ode_data = Array(sol_data)
 optimizers = [Adam(0.001)]
 epochs = [10]
 
-@testset "`ResultMLE`` from `piecewise_ML`" begin
+@testset "`InferenceResult`` from `piecewise_ML`" begin
     σ = 0.1
 
     ode_data_wn = Array(sol_data) 
@@ -48,10 +49,9 @@ epochs = [10]
     u0s_init = res.u0s_trained[1]
     @test length(u0s_init) == length(u0)
 
-    @test (AIC(res, ode_data, MvNormal(zeros(length(u0)), σ^2 * LinearAlgebra.I)) isa Number)
 end
 
-@testset "u0s for `ResultMLE`` from `piecewise_ML_indep_TS`" begin
+@testset "u0s for `InferenceResult`` from `piecewise_ML_indep_TS`" begin
     tsteps_arr = [tsteps[1:30],tsteps[31:60],tsteps[61:90]] # 3 ≠ time steps with ≠ length
 
     u0s = [rand(2) .+ 1, rand(2) .+ 1, rand(2) .+ 1]
@@ -76,10 +76,4 @@ end
 
     #TODO: to implement
     # @test (AIC(res, ode_datas, diagm(ones(length(p_init)))) isa Number)
-end
-
-@testset "InferenceResult" begin
-    p_trained = randn(get_plength(model))
-    res = ResultMLE(p_trained = p_trained)
-    @test construct_inference_result(model, res) isa InferenceResult
 end

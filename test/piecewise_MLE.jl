@@ -4,6 +4,7 @@ using UnPack
 using OptimizationOptimisers, OptimizationFlux, OptimizationOptimJL
 using Test
 using PiecewiseInference
+using Bijectors
 
 @model MyModel
 function (m::MyModel)(du, u, p, t)
@@ -18,7 +19,9 @@ p_true = (b = [0.23, 0.5],)
 p_init= (b = [1., 2.],)
 
 u0 = ones(2)
+dist = (bijector(Uniform(1e-3, 5e0)),)
 mp = ModelParams(p_true, 
+                dist,
                 tspan,
                 u0, 
                 BS3(),
@@ -31,7 +34,7 @@ ode_data = Array(sol_data)
 optimizers = [ADAM(0.001)]
 epochs = [4000]
 group_nb = 2
-batchsize = [group_nb]
+batchsizes = [group_nb]
 @testset "piecewise MLE" begin
     res = piecewise_MLE(p_init = p_init, 
                         group_nb = group_nb, 
@@ -40,12 +43,14 @@ batchsize = [group_nb]
                         tsteps = tsteps, 
                         epochs = epochs, 
                         optimizers = optimizers,
-                        batchsize = batchsize,
+                        batchsizes = batchsizes,
                         )
-    @test all(isapprox.(res.p_trained, p_true[:b], atol = 1e-4 ))
+    p_trained = get_p_trained(res)
+    @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-4))
+    @test length(res.losses) == sum(epochs) + 1
 end
 
-batchsize = [1]
+batchsizes = [1]
 @testset "piecewise MLE, SGD" begin
     res = piecewise_MLE(p_init = p_init, 
                         group_nb = group_nb, 
@@ -54,13 +59,15 @@ batchsize = [1]
                         tsteps = tsteps, 
                         epochs = epochs, 
                         optimizers = optimizers,
-                        batchsize = batchsize,
+                        batchsizes = batchsizes,
                         )
-    @test all(isapprox.(res.p_trained, p_true[:b], atol = 1e-3 ))
+    p_trained = get_p_trained(res)
+    @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-3 ))
+    @test length(res.losses) == sum(epochs) + 1
 end
 
 group_nb = 3
-batchsize = [2]
+batchsizes = [2]
 @testset "piecewise MLE, minibatch" begin
     res = piecewise_MLE(p_init = p_init, 
                         group_nb = group_nb, 
@@ -69,9 +76,11 @@ batchsize = [2]
                         tsteps = tsteps, 
                         epochs = epochs, 
                         optimizers = optimizers,
-                        batchsize = batchsize,
+                        batchsizes = batchsizes,
                         )
-    @test all(isapprox.(res.p_trained, p_true[:b], atol = 1e-3))
+    p_trained = get_p_trained(res)
+    @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-4))
+    @test length(res.losses) == sum(epochs) + 1
 end
 
 @testset "MLE 1 group" begin
@@ -84,7 +93,9 @@ end
                         epochs = epochs, 
                         optimizers = optimizers,
                         )
-    @test all( isapprox.(res.p_trained, p_true[:b], rtol = 1e-1))
+    p_trained = get_p_trained(res)
+    @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-1))
+    @test length(res.losses) == sum(epochs) + 1
 end
 
 @testset "MLE 1 group, LBFGS" begin
@@ -99,13 +110,15 @@ end
                         epochs = epochs, 
                         optimizers = optimizers,
                         )
-    @test all( isapprox.(res.p_trained, p_true[:b], rtol = 1e-1))
+    p_trained = get_p_trained(res)
+    @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-1))
+    @test length(res.losses) <= sum(epochs) + 1
 end
 
 @testset "MLE 1 group, ADAM, then LBFGS" begin
     optimizers = [ADAM(0.01), LBFGS()]
     epochs = [1000,200]
-    batchsize = [1,2]
+    batchsizes = [1,2]
     ode_data_wnoise = ode_data .+ randn(size(ode_data)) .* 0.1
     res = piecewise_MLE(p_init = p_init, 
                         group_nb = 2, 
@@ -115,7 +128,9 @@ end
                         epochs = epochs, 
                         optimizers = optimizers,
                         )
-    @test all( isapprox.(res.p_trained, p_true[:b], rtol = 1e-1))
+    p_trained = get_p_trained(res)
+    @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-1))
+    @test length(res.losses) <= sum(epochs) + 1
 end
 
 @testset "piecewise MLE independent TS" begin
@@ -141,7 +156,9 @@ end
                         epochs = epochs, 
                         optimizers = optimizers,
                         )
-    @test all(isapprox.(res.p_trained, p_true[:b], rtol = 1e-1 ))
+    p_trained = get_p_trained(res)
+    @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-1))
+    @test length(res.losses) == sum(epochs) + 1
 end
 
 @testset "Initialisation iterative piecewise ML" begin
@@ -173,5 +190,7 @@ end
                                         data_set = ode_data_wnoise, 
                                         model = model, 
                                         tsteps = tsteps,)
-    @test all( isapprox.(res_array[end].p_trained, p_true[:b], rtol = 1e-1 ))
+    p_trained = get_p_trained(res_array[end])
+    @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-1))
+    @test length(res_array[end].losses) == sum(epochs) + 1
 end

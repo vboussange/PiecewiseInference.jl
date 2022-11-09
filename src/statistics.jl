@@ -6,7 +6,7 @@ Computes the RSS of `res` given `data_set`.
 # Argument:
 - `fn` is set to `identity` but can be e.g. `log` if lognormal loss used.
 """
-function RSS(res::ResultMLE, data_set::Array, noisedistrib::T) where T <: Sampleable
+function RSS(res::InferenceResult, data_set::Array, noisedistrib::T) where T <: Sampleable
     if typeof(noisedistrib) isa MvNormal
         fn = identity
     elseif typeof(noisedistrib) isa MvLogNormal
@@ -35,7 +35,7 @@ $(SIGNATURES)
 - `noisedistrib` corresponds to the assumed distribution of the noise. 
 It can be `:MvLogNormal` or `:MvNormal` (comprising the multivariate types)
 """
-function loglikelihood(res::ResultMLE, data_set::Array, noisedistrib::Sampleable)
+function loglikelihood(res::InferenceResult, data_set::Array, noisedistrib::Sampleable)
     isempty(res.pred) ? error("`res.pred` should not be empty, use `piecewise_MLE` with `save_pred = true`") : nothing
     return loglikelihood(res.pred, res.ranges, data_set, noisedistrib)
 end
@@ -43,7 +43,7 @@ end
 #specialised version for piecewise
 function loglikelihood(pred::Vector, ranges::Vector, data_set::Array, noisedistrib) 
     if typeof(pred) <: Vector{Vector{Array{T}}} where T # for independent time series
-        error("Function to yet implemented from `ResultMLE` with Independent time series")
+        error("Function to yet implemented from `InferenceResult` with Independent time series")
     else
         pred_all_batches = cat( [pred[i] for (i,rng) in enumerate(ranges)]..., dims=2)
         data_all_batches = cat( [data_set[:,rng] for (i,rng) in enumerate(ranges)]..., dims=2)
@@ -82,14 +82,14 @@ end
 function loglikelihood(res::InferenceResult, 
                         ode_data::Array, 
                         noisedistrib;
-                        u0s = res.res.u0s_trained,
-                        p = res.res.p_trained) # we take res.res.p_trained because we would have to transform the parameters otherwise
+                        u0s = res.u0s_trained,
+                        p = res.p_trained) # we take res.p_trained because we would have to transform the parameters otherwise
     p, _ = Optimisers.destructure(p)
-    p = p |> res.m.mp.st
+    p = p |> res.model.mp.st
     θ = [u0s...;p] 
     loss_fn(data, params, pred, rg) = PiecewiseInference.loglikelihood(pred, data, noisedistrib)
-    idx_rngs = 1:length(res.res.ranges)
-    l, _ = piecewise_loss(θ, ode_data, get_kwargs(res.m)[:saveat], res.m, loss_fn, res.res.ranges, idx_rngs; continuity_term=0.)
+    idx_rngs = 1:length(res.ranges)
+    l, _ = piecewise_loss(θ, ode_data, get_kwargs(res.model)[:saveat], res.model, loss_fn, res.ranges, idx_rngs; continuity_term=0.)
     return l
 end
 
@@ -98,7 +98,7 @@ $(SIGNATURES)
 
 Computes the AIC of `res` given the observational noise distribution `noisedistrib`.
 """
-function AIC(res::ResultMLE, data_set::Array, noisedistrib::Sampleable)
+function AIC(res::InferenceResult, data_set::Array, noisedistrib::Sampleable)
     nparams = length(res.p_trained)
     logl = loglikelihood(res, data_set, noisedistrib)
     AIC_likelihood = - 2 * logl + 2 * nparams
@@ -211,10 +211,10 @@ function R2(odedata::AbstractArray, pred::AbstractArray)
 end
 
 function R2(inf_res::InferenceResult, data_set::AbstractArray, args...) 
-    pred = inf_res.res.pred
-    ranges = inf_res.res.ranges
+    pred = inf_res.pred
+    ranges = inf_res.ranges
     if typeof(pred) <: Vector{Vector{Array{T}}} where T # for independent time series
-        error("Function to yet implemented from `ResultMLE` with Independent time series")
+        error("Function to yet implemented from `InferenceResult` with Independent time series")
     else
         pred_all_batches = cat( [pred[i] for (i,rng) in enumerate(ranges)]..., dims=2)
         data_all_batches = cat( [data_set[:,rng] for (i,rng) in enumerate(ranges)]..., dims=2)
