@@ -38,7 +38,7 @@ module PiecewiseInference
     end
 
     export ForwardDiffSensitivity # from DiffEqSensitivity
-    export ParamFun, InferenceResult, construct_inference_result, get_p_trained
+    export ParamFun, InferenceResult, get_p_trained
     export group_ranges, AIC, AICc, AICc_TREE, moments!, moments, divisors
     export piecewise_loss
     export piecewise_MLE, piecewise_ML_indep_TS, iterative_piecewise_MLE, get_ranges
