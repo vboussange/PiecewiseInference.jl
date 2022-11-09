@@ -202,10 +202,15 @@ function _piecewise_MLE(;p_init,
                         )
     dim_prob = get_dims(model) #used by loss_nm
     @assert (length(optimizers) == length(epochs) == length(batchsizes)) "`optimizers`, `epochs`, `batchsizes` must be of same length"
-    p_init, _ = Optimisers.destructure(p_init)
-    p_init = get_st(model)(p_init) # projecting p_init in optimization space
+    
+    # initialise p_init
+    p_init = _init_p(p_init, model)
+    # initialise u0s
+    u0s_init = _init_u0s(u0s_init, model)
+    # trainable parameters
+    θ = [u0s_init;p_init]
+    # idx of batches
     idx_ranges = (1:length(ranges),)
-
     # piecewise loss
     function _loss(θ, idx_rngs)
         return piecewise_loss(θ, 
@@ -220,13 +225,6 @@ function _piecewise_MLE(;p_init,
     end
     __loss(x, p, idx_rngs=idx_ranges...) = _loss(x, idx_rngs) #used for the "Optimization function"
 
-    # initialising with data_set if not provided
-    if isnothing(u0s_init) 
-        @assert (size(data_set,1) == dim_prob) "The dimension of the training data does not correspond to the dimension of the state variables. This probably means that the training data corresponds to observables different from the state variables. In this case, you need to provide manually `u0s_init`." 
-        u0s_init = reshape(data_set[:,first.(ranges),:],:)
-    end
-
-    θ = [u0s_init;p_init]
     nb_group = length(ranges)
     println("piecewise_MLE with $(length(tsteps)) points and $nb_group groups.")
 
@@ -283,7 +281,7 @@ function _piecewise_MLE(;p_init,
     
     minloss, pred = _loss(res.minimizer, idx_ranges...)
     p_trained = _get_param(res.minimizer, nb_group, dim_prob) |> collect
-    u0s_trained = _get_u0s(res.minimizer, nb_group, dim_prob)
+    u0s_trained = _get_u0s(res.minimizer, nb_group, dim_prob, model)
 
 
     @info "Minimum loss for all batches: $minloss"
@@ -454,4 +452,19 @@ function __solve(opt::OPT, optprob, idx_ranges, batchsizes, epochs, callback) wh
                             ncycle(train_loader, epochs),
                             callback=callback, 
                             save_best=true)
+end
+
+function _init_p(p_init, model)
+    p_init, _ = Optimisers.destructure(p_init)
+    p_init = get_p_bijector(model)(p_init) # projecting p_init in optimization space
+end
+
+function _init_u0s(u0s_init, model)
+     # initialising with data_set if not provided
+     if isnothing(u0s_init) 
+        @assert (size(data_set,1) == dim_prob) "The dimension of the training data does not correspond to the dimension of the state variables. This probably means that the training data corresponds to observables different from the state variables. In this case, you need to provide manually `u0s_init`." 
+        u0s_init = reshape(data_set[:,first.(ranges),:],:)
+    end
+    u0s_init = [get_u0s_bijector(model)(u0) for u0 in u0s_init] # projecting u0s_init in optimization space
+    return u0s_init
 end

@@ -1,4 +1,5 @@
 using PiecewiseInference
+using Test
 
 datasize = 205
 group_nb = 21

@@ -40,7 +40,7 @@ function piecewise_loss(
     @assert length(θ) > nb_group * dim_prob "`params` should contain [u0;p]"
 
     params = _get_param(θ, nb_group, dim_prob) # params of the problem
-    u0s = _get_u0s(θ, nb_group, dim_prob)
+    u0s = _get_u0s(θ, nb_group, dim_prob, model)
 
     # Calculate multiple shooting loss
     loss = zero(eltype(θ))
@@ -105,10 +105,14 @@ function _default_continuity_loss(û_end::AbstractArray,
 end
 
 function _get_param(θ, nb_group, dim_prob)
+    # no need to convert to param space - 
+    # this is done by the `simulate` function when provided 
+    # with a param vector `p::AbstractArray`
     return @view θ[nb_group * dim_prob + 1: end]
 end
 
-function _get_u0s(θ, nb_group, dim_prob, st)
-    # @show nb_group, dim_prob
-    return [θ[dim_prob*(i-1)+1:dim_prob*i] for i in 1:nb_group]
+function _get_u0s(θ, nb_group, dim_prob, model)
+    # converting back to u0 space
+    u0_bij⁻¹ = inverse(get_u0s_bij(model))
+    return [u0_bij⁻¹(θ[dim_prob*(i-1)+1:dim_prob*i]) for i in 1:nb_group]
 end

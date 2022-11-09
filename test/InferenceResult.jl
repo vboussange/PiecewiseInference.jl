@@ -1,5 +1,5 @@
 using LinearAlgebra, ParametricModels, OrdinaryDiffEq, DiffEqSensitivity
-using Bijectors: Exp, inverse, Identity, Stacked
+using Bijectors: Exp, inverse, Identity, Stacked, bijector
 using UnPack
 using OptimizationOptimisers
 using Test
@@ -18,10 +18,15 @@ tspan = (tsteps[1], tsteps[end])
 p_true = (b = [0.23, 0.5],)
 p_init= (b = [1., 2.],)
 
+dists = (Uniform(0.,5.),)
+u0s_bij = bijector(Uniform(0.,5.))
+
 u0 = ones(2)
 mp = ModelParams(p_true, 
+                dists,
                 tspan,
                 u0, 
+                u0s_bij,
                 BS3(),
                 sensealg = ForwardDiffSensitivity();
                 saveat = tsteps, 

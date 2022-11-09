@@ -27,7 +27,7 @@ function InferenceResult(;model,
                         pred = Array{Float64,2}[], 
                         ranges = [], 
                         losses = Float64[])
-    p_trained = inverse(get_st(model))(p_trained) # projecting p in true parameter space
+    p_trained = inverse(get_p_bijector(model))(p_trained) # projecting p in true parameter space
     p_tuple = get_re(model)(p_trained) # transforming in tuple
     mp = get_mp(model)
     mp = ParametricModels.remake(mp, p = p_tuple)
