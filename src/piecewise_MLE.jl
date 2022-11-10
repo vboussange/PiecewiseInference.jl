@@ -201,16 +201,24 @@ function _piecewise_MLE(;p_init,
                         kwargs...
                         )
     dim_prob = get_dims(model) #used by loss_nm
+    idx_ranges = (1:length(ranges),) # idx of batches
+
     @assert (length(optimizers) == length(epochs) == length(batchsizes)) "`optimizers`, `epochs`, `batchsizes` must be of same length"
-    
+    @assert (size(data_set,1) == dim_prob) "The dimension of the training data does not correspond to the dimension of the state variables. This probably means that the training data corresponds to observables different from the state variables. In this case, you need to provide manually `u0s_init`." 
+    for (i,opt) in enumerate(optimizers)
+        OPT = typeof(opt)
+        if OPT <: Union{Optim.AbstractOptimizer, Optim.Fminbox, Optim.SAMIN, Optim.ConstrainedOptimizer}
+            @assert batchsizes[i] == length(idx_ranges...) "$OPT is not compatible with mini-batches - use `batchsizes = group_nb`"
+        end
+    end
+
     # initialise p_init
     p_init = _init_p(p_init, model)
     # initialise u0s
-    u0s_init = _init_u0s(u0s_init, model)
+    u0s_init = _init_u0s(u0s_init, data_set, ranges, model)
     # trainable parameters
     θ = [u0s_init;p_init]
-    # idx of batches
-    idx_ranges = (1:length(ranges),)
+
     # piecewise loss
     function _loss(θ, idx_rngs)
         return piecewise_loss(θ, 
@@ -437,11 +445,11 @@ function __solve(opt::OPT, optprob, idx_ranges, batchsizes, epochs, callback) wh
                                                                                                 Optim.SAMIN, 
                                                                                                 Optim.ConstrainedOptimizer}
     @info "Running optimizer $OPT"
-    @assert batchsizes == length(idx_ranges...) "$OPT is not compatible with mini-batches - use `batchsizes = group_nb`"
     res = Optimization.solve(optprob,
                             opt,
                             maxiters = epochs, 
                             callback = callback)
+    return res
 end
 
 function __solve(opt::OPT, optprob, idx_ranges, batchsizes, epochs, callback) where OPT
@@ -452,19 +460,20 @@ function __solve(opt::OPT, optprob, idx_ranges, batchsizes, epochs, callback) wh
                             ncycle(train_loader, epochs),
                             callback=callback, 
                             save_best=true)
+    return res
 end
 
 function _init_p(p_init, model)
     p_init, _ = Optimisers.destructure(p_init)
     p_init = get_p_bijector(model)(p_init) # projecting p_init in optimization space
+    return p_init
 end
 
-function _init_u0s(u0s_init, model)
+function _init_u0s(u0s_init, data_set, ranges, model)
      # initialising with data_set if not provided
      if isnothing(u0s_init) 
-        @assert (size(data_set,1) == dim_prob) "The dimension of the training data does not correspond to the dimension of the state variables. This probably means that the training data corresponds to observables different from the state variables. In this case, you need to provide manually `u0s_init`." 
         u0s_init = reshape(data_set[:,first.(ranges),:],:)
     end
-    u0s_init = [get_u0s_bijector(model)(u0) for u0 in u0s_init] # projecting u0s_init in optimization space
+    u0s_init = [get_u0_bijector(model)(u0) for u0 in u0s_init] # projecting u0s_init in optimization space
     return u0s_init
 end

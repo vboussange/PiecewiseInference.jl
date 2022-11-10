@@ -113,6 +113,6 @@ end
 
 function _get_u0s(θ, nb_group, dim_prob, model)
     # converting back to u0 space
-    u0_bij⁻¹ = inverse(get_u0s_bij(model))
+    u0_bij⁻¹ = inverse(get_u0_bijector(model))
     return [u0_bij⁻¹(θ[dim_prob*(i-1)+1:dim_prob*i]) for i in 1:nb_group]
 end

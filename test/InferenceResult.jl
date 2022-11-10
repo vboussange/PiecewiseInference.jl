@@ -18,17 +18,18 @@ tspan = (tsteps[1], tsteps[end])
 p_true = (b = [0.23, 0.5],)
 p_init= (b = [1., 2.],)
 
-dists = (Uniform(0.,5.),)
-u0s_bij = bijector(Uniform(0.,5.))
+p_bij = (bijector(Uniform(0.,3.)),)
+# u0_bij = bijector(Uniform(0.,5.))
+u0_bij = bijector(Uniform(0.,5.))
 
 u0 = ones(2)
-mp = ModelParams(p_true, 
-                dists,
+mp = ModelParams(;p = p_true, 
+                p_bij,
                 tspan,
                 u0, 
-                u0s_bij,
-                BS3(),
-                sensealg = ForwardDiffSensitivity();
+                u0_bij,
+                alg = BS3(),
+                sensealg = ForwardDiffSensitivity(),
                 saveat = tsteps, 
                 )
 model = MyModel(mp)

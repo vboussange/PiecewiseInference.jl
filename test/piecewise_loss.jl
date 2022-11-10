@@ -14,11 +14,11 @@ p_true = (r = [0.5, 1.], b = [0.23, 0.5],)
 p_init= (r = [0.7, 1.2], b = [0.2, 0.2],)
 
 u0 = ones(2)
-mp = ModelParams(p_true, 
+mp = ModelParams(;p = p_true, 
                 tspan,
                 u0, 
-                BS3(),
-                sensealg = ForwardDiffSensitivity();
+                alg = BS3(),
+                sensealg = ForwardDiffSensitivity(),
                 saveat = tsteps, 
                 )
 model = MyModel(mp)

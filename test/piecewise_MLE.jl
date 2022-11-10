@@ -19,13 +19,16 @@ p_true = (b = [0.23, 0.5],)
 p_init= (b = [1., 2.],)
 
 u0 = ones(2)
-dist = (bijector(Uniform(1e-3, 5e0)),)
-mp = ModelParams(p_true, 
-                dist,
+p_bij = (bijector(Uniform(1e-3, 5e0)),)
+u0_bij = bijector(Uniform(1e-3,5.))
+
+mp = ModelParams(; p = p_true, 
+                p_bij,
                 tspan,
                 u0, 
-                BS3(),
-                sensealg = ForwardDiffSensitivity();
+                u0_bij,
+                alg = BS3(),
+                sensealg = ForwardDiffSensitivity(),
                 saveat = tsteps, 
                 )
 model = MyModel(mp)
