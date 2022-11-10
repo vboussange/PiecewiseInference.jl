@@ -40,7 +40,7 @@ function InferenceResult(;model,
                         losses) #/!\ new{Model,RES}( is required! 
 end
 
-get_p_trained(res::InferenceResult) = res.model.mp.p
+get_p_trained(res::InferenceResult) = get_p(res.model)
 
 # function construct_result(cm::CM, res::RES) where {CM <: ComposableModel, RES}
 #     _ps = res.p_trained

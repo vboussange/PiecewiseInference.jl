@@ -38,6 +38,14 @@ ode_data = Array(sol_data)
 optimizers = [Adam(0.001)]
 epochs = [10]
 
+
+@testset "`InferenceResult``" begin
+    p_trained = get_p_bijector(model)(destructure(p_init)[1])
+    res = InferenceResult(;model,p_trained)
+    p_res = get_p_trained(res)
+    @assert all(p_res[:b] .== p_init[:b])
+end
+
 @testset "`InferenceResult`` from `piecewise_ML`" begin
     σ = 0.1
 
@@ -54,7 +62,7 @@ epochs = [10]
                         )
     u0s_init = res.u0s_trained[1]
     @test length(u0s_init) == length(u0)
-
+    @test any(get_p_trained(res)[:b] .!== p_true[:b])
 end
 
 @testset "u0s for `InferenceResult`` from `piecewise_ML_indep_TS`" begin

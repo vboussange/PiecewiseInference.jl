@@ -307,7 +307,7 @@ function _piecewise_MLE(;p_init,
     end
     
     if save_pred
-        res = InferenceResult(model,
+        res = InferenceResult(;model,
                         minloss, 
                         p_trained,
                         u0s_trained,
@@ -315,11 +315,10 @@ function _piecewise_MLE(;p_init,
                         ranges, 
                         losses)
     else
-        res = InferenceResult(model,
+        res = InferenceResult(;model,
                         minloss,
                         p_trained,
                         u0s_trained, 
-                        [], 
                         ranges, 
                         losses,)
     end
