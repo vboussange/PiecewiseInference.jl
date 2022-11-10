@@ -28,7 +28,7 @@ mp = ModelParams(;p = p_true,
                 saveat = tsteps, 
                 )
 model = MyModel(mp)
-sol = simulate(mymodel)
+sol = simulate(model)
 true_data = sol |> Array
 
 @testset "likelihood normal" begin
@@ -85,7 +85,7 @@ end
     odedata = true_data + σ * randn(size(true_data)...)
     # test loglikelihood from InferenceResult
     p_trained, _ = destructure(p_true)
-    res = InferenceResult(model = mymodel,
+    res = InferenceResult(model = model,
                         p_trained = p_trained, 
                         u0s_trained=[u0], 
                         ranges = [1:length(tsteps)],

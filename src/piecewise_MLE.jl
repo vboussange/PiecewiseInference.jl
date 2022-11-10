@@ -404,7 +404,7 @@ function iterative_piecewise_MLE(;group_sizes = nothing,
         u0s_init = _initialise_u0s_iterative_piecewise_ML(res.pred,res.ranges,ranges)
         tempres = _piecewise_MLE(;ranges = ranges, 
                                 optimizers = optimizers_array[i],
-                                u0s_init = reshape(u0s_init,:),
+                                u0s_init = u0s_init,
                                 threshold = threshold,
                                 kwargs...)
         if tempres.minloss < res.minloss || tempres.minloss < threshold # if threshold is met, we can go one level above
@@ -419,7 +419,7 @@ end
 
 function _initialise_u0s_iterative_piecewise_ML(pred, ranges_pred, ranges_2)
     dim_prob = size(first(pred),1)
-    u0_2 = zeros(eltype(first(pred)), dim_prob, length(ranges_2))
+    u0_2 = [zeros(eltype(first(pred)), dim_prob) for i in 1:length(ranges_2)]
     for (i, rng2) in enumerate(ranges_2)
         _r = first(rng2) # index of new initial condtions on the time steps
         for j in 0:length(ranges_pred)-1
@@ -432,7 +432,7 @@ function _initialise_u0s_iterative_piecewise_ML(pred, ranges_pred, ranges_2)
             rng = ranges_pred[end-j]
             if _r in rng
                 ui_pred = reshape(pred[end-j][:, _r .== rng],:)
-                u0_2[:,i] .= ui_pred
+                u0_2[i] .= ui_pred
                 break
             end
         end
@@ -469,11 +469,16 @@ function _init_p(p_init, model)
     return p_init
 end
 
+"""
+    $SIGNATURES
+`u0s_init` should come as a vector of u0, i.e. a vector of vector.
+We ouput it as a vector of scalar, after tranformation in the optimization space.
+"""
 function _init_u0s(u0s_init, data_set, ranges, model)
      # initialising with data_set if not provided
      if isnothing(u0s_init) 
-        u0s_init = reshape(data_set[:,first.(ranges),:],:)
+        u0s_init = [data_set[:,first(rg)] for rg in ranges]
     end
     u0s_init = [get_u0_bijector(model)(u0) for u0 in u0s_init] # projecting u0s_init in optimization space
-    return u0s_init
+    return vcat(u0s_init...)
 end

@@ -173,7 +173,8 @@ end
     pred_init = [cumsum(ones(3, length(rng)), dims=2) for rng in ranges_init]
 
     u0_2 = PiecewiseInference._initialise_u0s_iterative_piecewise_ML(pred_init, ranges_init, ranges_2)
-    @test all(u0_2 .== 1.)
+    @test u0_2 isa Vector
+    @test all([all(u0_2_i .== 1.) for u0_2_i in u0_2])
 end
 
 @testset "Iterative piecewise MLE" begin
