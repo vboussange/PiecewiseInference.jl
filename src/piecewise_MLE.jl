@@ -194,8 +194,6 @@ function _piecewise_MLE(;p_init,
                         plotting = false,
                         info_per_its=50,
                         cb = nothing,
-                        p_true = nothing,
-                        p_labs = nothing,
                         threshold = 1e-16,
                         save_pred = true, 
                         kwargs...
@@ -240,22 +238,19 @@ function _piecewise_MLE(;p_init,
     callback(θ, l, pred=[]) = begin
         push!(losses, l)
         p_trained = _get_param(θ,nb_group,dim_prob)
-        isnothing(p_true) ? nothing : push!(θs, sum((p_trained .- p_true).^2))
+
         if length(losses)%info_per_its==0
             verbose_loss ? println("Current loss after $(length(losses)) iterations: $(losses[end])") : nothing
-            if !isnothing(cb)
-                cb(θs, p_trained, losses, pred, ranges)
-            end
-            if plotting
+        end
+        if !isnothing(cb)
+            cb(p_trained, losses, pred, ranges)
+        elseif plotting
+            if length(losses)%info_per_its==0
                 plot_convergence(losses, 
                                 pred, 
                                 data_set, 
                                 ranges, 
-                                tsteps, 
-                                p_true = p_true, 
-                                p_labs = p_labs, 
-                                θs = θs, 
-                                p_trained = p_trained)
+                                tsteps)
             end
         end
         if l < threshold
@@ -276,13 +271,15 @@ function _piecewise_MLE(;p_init,
 
 
     @info "Training started"
-    objectivefun = OptimizationFunction(__loss, Optimization.AutoZygote()) # similar to https://sensitivity.sciml.ai/stable/ode_fitting/stiff_ode_fit/
+    objectivefun = OptimizationFunction(__loss, Optimization.AutoForwardDiff()) # similar to https://sensitivity.sciml.ai/stable/ode_fitting/stiff_ode_fit/
     opt = first(optimizers)
     optprob = Optimization.OptimizationProblem(objectivefun, θ)
     res = __solve(opt, optprob, idx_ranges, batchsizes[1], epochs[1], callback)
+    u0 = res.minimizer
     for (i, opt) in enumerate(optimizers[2:end])
-        optprob = remake(optprob, u0=res.minimizer)
+        optprob = remake(optprob, u0=u0)
         res = __solve(optimizers[i+1], optprob, idx_ranges, batchsizes[i+1], epochs[i+1], callback)
+        u0 = res.minimizer
     end
     
     minloss, pred = _loss(res.minimizer, idx_ranges...)
@@ -455,8 +452,7 @@ function __solve(opt::OPT, optprob, idx_ranges, batchsizes, epochs, callback) wh
     res = Optimization.solve(optprob,
                             opt, 
                             ncycle(train_loader, epochs),
-                            callback=callback, 
-                            save_best=true)
+                            callback=callback)
     return res
 end
 
