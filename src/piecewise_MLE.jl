@@ -276,8 +276,6 @@ function _piecewise_MLE(;p_init,
 
 
     @info "Training started"
-    # TODO: here, not sure whether we use sensealg or not!
-
     objectivefun = OptimizationFunction(__loss, Optimization.AutoZygote()) # similar to https://sensitivity.sciml.ai/stable/ode_fitting/stiff_ode_fit/
     opt = first(optimizers)
     optprob = Optimization.OptimizationProblem(objectivefun, θ)
