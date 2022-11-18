@@ -24,10 +24,10 @@ The parameter 'continuity_term' should be a relatively big number to enforce a l
 whenever the last point of any group doesn't coincide with the first point of next group.
 """
 function piecewise_loss(
+    infprob::InferenceProblem,
     θ::AbstractArray,
     ode_data::AbstractArray,
     tsteps::AbstractArray,
-    model::AbstractModel,
     loss_function,
     continuity_loss,
     ranges::AbstractArray,
@@ -47,11 +47,8 @@ function piecewise_loss(
         rg = ranges[i]
         u0_i = _get_u0s(θ, model, i) # taking absolute value, assuming populations cannot be negative
         data = ode_data[:, rg]
-        sol = simulate(model;
-                        u0 = u0_i,
-                        tspan = (tsteps[first(rg)], tsteps[last(rg)]), 
-                        p = params, 
-                        saveat = tsteps[rg])
+        tspan = (tsteps[first(rg)], tsteps[last(rg)])
+        sol = simulate(infprob, u0_i, tspan, params, tsteps[rg])
         # Abort and return infinite loss if one of the integrations failed
         sol.retcode == :Success && sol.retcode !== :Terminated ? nothing : return Inf, group_predictions
 
@@ -111,6 +108,5 @@ end
 function _get_u0s(θ, model, i)
     dim_prob = get_dims(model)
     # converting back to u0 space
-    u0_bij⁻¹ = inverse(get_u0_bijector(model))
-    return u0_bij⁻¹(θ[dim_prob*(i-1)+1:dim_prob*i])
+    return θ[dim_prob*(i-1)+1:dim_prob*i]
 end
