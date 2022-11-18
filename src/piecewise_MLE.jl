@@ -26,12 +26,11 @@ Piecewise inference. Loops through the optimizers `optimizers`.
 Returns a `InferenceResult`.
 
 # Arguments
+- `infprob`: the InferenceProblem
 - `opt` : array of optimizers
-- `p_init` : initial guess for parameters of `model`
 - `group_size` : size of segments
 - `group_nb`: alternatively to `group_size`, one can ask for a certain number of segments
 - `data` : data
-- `model` : a `ParametricModel`, from ParametricModels.jl.
 - `tsteps` : corresponding to data
 
 # Optional
@@ -62,6 +61,7 @@ using LinearAlgebra, ParametricModels, DiffEqSensitivity
 using UnPack
 using OptimizationOptimisers, OptimizationFlux
 using PiecewiseInference
+using DiffEqSensitivity: ForwardDiffSensitivity
 
 @model MyModel
 function (m::MyModel)(du, u, p, t)
@@ -75,25 +75,32 @@ tspan = (tsteps[1], tsteps[end])
 p_true = (b = [0.23, 0.5],)
 p_init= (b = [1., 2.],)
 
+# Defining the model
+# Pay attention to the semi column before the parameters for `ModelParams`
 u0 = ones(2)
-mp = ModelParams(p_true, 
+mp = ModelParams(;p = p_true, 
                 tspan,
                 u0, 
-                BS3(),
-                sensealg = ForwardDiffSensitivity();
+                alg = BS3(),
+                sensealg = ForwardDiffSensitivity(),
                 saveat = tsteps, 
                 )
 model = MyModel(mp)
-sol_data = simulate(model)
+sol_data = ParametricModels.simulate(model)
 ode_data = Array(sol_data)
+# Define the `InferenceProblem`
+# First specifiy which values can the parameter take with bijectors
+p_bij = (bijector(Uniform(1e-3, 5e0)),)
+u0_bij = bijector(Uniform(1e-3,5.))
+infprob = InferenceProblem(model, p_init, p_bij, u0_bij)
+
 optimizers = [ADAM(0.001)]
 epochs = [5000]
 group_nb = 2
 batchsizes = [1]
-res = piecewise_MLE(p_init = p_init, 
+res = piecewise_MLE(infprob,
                     group_nb = group_nb, 
                     data = ode_data, 
-                    model = model, 
                     tsteps = tsteps, 
                     epochs = epochs, 
                     optimizers = optimizers,
@@ -365,7 +372,7 @@ For kwargs, see `piecewise_MLE`.
 
 # Specific arguments
 - `group_sizes` : array of group sizes to test
-- `optimizers_array`: optimizers_array[i] is an array of optimizers for the trainging processe of `group_sizes[i`
+- `optimizers_array`: optimizers_array[i] is an array of optimizers for the trainging process of `group_sizes[i]`
 """
 function iterative_piecewise_MLE(infprob;group_sizes = nothing,
                                 group_nbs = nothing,
