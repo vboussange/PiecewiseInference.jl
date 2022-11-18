@@ -6,10 +6,19 @@ Base.@kwdef struct InferenceProblem{M,P,RE,PB,UB}
     u0_bij::UB
 end
 
+"""
+$(SIGNATURES)
+
+## Args
+- `model`: a model of type `AbstractModel`.
+- `p0`: initial guess of the parameters. Should be a named tuple.
+- `p_bij`: a tuple with same length as `p0`, containing bijectors, to constrain parameter values.
+- `u0_bij`: a bijector for to constrain state variables `u0`.
+"""
 function InferenceProblem(model::M, 
-                    p0,
+                    p0::T,
                     p_bij = fill(Identity{0}(),length(p0)),
-                    u0_bij = Identity{0}()) where M <: AbstractModel
+                    u0_bij = Identity{0}()) where {M <: AbstractModel, T<: NamedTuple}
     @assert p0 isa NamedTuple
     @assert eltype(p0) <: AbstractArray "The values of `p` must be arrays"
     @assert length(p_bij) == length(values(p0)) "Each element of `p_dist` should correspond to an entry of `p0`"

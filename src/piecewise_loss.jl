@@ -34,6 +34,7 @@ function piecewise_loss(
     idx_rngs;
     continuity_term::Real=0,
     )
+    model = get_model(infprob)
     dim_prob = get_dims(model)
     nb_group = length(ranges)
     @assert length(θ) > nb_group * dim_prob "`params` should contain [u0;p]"
@@ -68,10 +69,10 @@ function piecewise_loss(
 end
 
 function piecewise_loss(
+    infprob::InferenceProblem,
     θ::AbstractArray,
     ode_data::AbstractArray,
     tsteps::AbstractArray,
-    model::AbstractModel,
     loss_function::Function,
     ranges::AbstractArray,
     idx_rngs;
@@ -79,10 +80,10 @@ function piecewise_loss(
     )
 
     return piecewise_loss(
+            infprob,
             θ,
             ode_data,
             tsteps,
-            model,
             loss_function,
             _default_continuity_loss,
             ranges,

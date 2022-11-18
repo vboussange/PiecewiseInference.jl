@@ -1,4 +1,11 @@
-using ForwardDiff
+using PiecewiseInference, Test, ForwardDiff, OrdinaryDiffEq
+using DiffEqSensitivity:ForwardDiffSensitivity
+using OptimizationOptimJL:BFGS
+using OptimizationOptimisers:Adam
+using ParametricModels
+using Distributions
+using UnPack
+
 @model MyModel
 function (m::MyModel)(du, u, p, t)
     @unpack r, b = p
@@ -32,29 +39,28 @@ loss_function(data, params, pred, rg) = sum(abs2, data - pred)
 # plot(tsteps, sol_data')
 # gcf()
 θ = [ode_data[:,first.(ranges),:][:];p_init[:r];p_init[:b]]
+infprob = InferenceProblem(model, p_init)
  
 @testset "Testing correct behavior `piecewise_loss`" begin
-    l, pred = piecewise_loss(θ, 
+    l, pred = piecewise_loss(infprob,
+                        θ, 
                         ode_data, 
                         tsteps, 
-                        model, 
                         loss_function, 
                         ranges,
-                        1:length(ranges), # idx_ranges
-                        sensealg = ForwardDiffSensitivity())
+                        1:length(ranges))
     @test isa(l, Number)
     @test isa(pred, Vector)
 end
 
 @testset "Testing differentiability `piecewise_loss`" begin
-    _loss(θ) = piecewise_loss(θ, 
-                        ode_data, 
-                        tsteps, 
-                        model, 
-                        loss_function, 
-                        ranges, 
-                        1:length(ranges), # idx_ranges
-                        sensealg = ForwardDiffSensitivity())[1]
+    _loss(θ) = piecewise_loss(infprob,
+                                θ, 
+                                ode_data, 
+                                tsteps, 
+                                loss_function, 
+                                ranges,
+                                1:length(ranges))[1]
     l = _loss(θ)
     mygrad = ForwardDiff.gradient(_loss, θ)
     @test length(mygrad) == length(θ)
