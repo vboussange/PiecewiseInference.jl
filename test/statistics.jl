@@ -19,8 +19,6 @@ u0 = ones(2)
 u0_bij = bijector(Uniform(1e-3,5.))
 
 mp = ModelParams(;p = p_true, 
-                p_bij,
-                u0_bij,
                 tspan,
                 u0, 
                 alg = BS3(),
@@ -30,6 +28,7 @@ mp = ModelParams(;p = p_true,
 model = MyModel(mp)
 sol = simulate(model)
 true_data = sol |> Array
+infprob = InferenceProblem(model, p_init, p_bij, u0_bij)
 
 @testset "likelihood normal" begin
     σ_estim(L, N, M) = exp(-(2 * L / N / M + 1)) / 2 / pi
@@ -44,7 +43,13 @@ true_data = sol |> Array
 
     # test loglikelihood from InferenceResult
     p_trained, _ = destructure(p_true)
-    res = InferenceResult(model = model, p_trained = p_trained, u0s_trained=[u0], ranges = [1:length(tsteps)], pred = [true_data])
+    res = InferenceResult(infprob, 
+                        Inf,
+                        p_trained, 
+                        [u0],
+                        [true_data], 
+                        [1:length(tsteps)],
+                        [true_data])
     L_ec = PiecewiseInference.loglikelihood(res, odedata, dist)
     @test isapprox(L_mb, L_ec)
 end
@@ -62,7 +67,13 @@ end
 
     # test loglikelihood from InferenceResult
     p_trained, _ = destructure(p_true)
-    res = InferenceResult(model = model, p_trained = p_trained, u0s_trained=[u0], ranges = [1:length(tsteps)], pred = [true_data])
+    res = InferenceResult(infprob, 
+                        Inf,
+                        p_trained, 
+                        [u0],
+                        [true_data],
+                        [1:length(tsteps)],
+                        [true_data])
     L_ec = PiecewiseInference.loglikelihood(res, odedata, dist)
     @test isapprox(L_mb, L_ec)
 end
@@ -85,11 +96,13 @@ end
     odedata = true_data + σ * randn(size(true_data)...)
     # test loglikelihood from InferenceResult
     p_trained, _ = destructure(p_true)
-    res = InferenceResult(model = model,
-                        p_trained = p_trained, 
-                        u0s_trained=[u0], 
-                        ranges = [1:length(tsteps)],
-                        pred = [true_data])
+    res = InferenceResult(infprob, 
+                        Inf,
+                        p_trained, 
+                        [u0],
+                        [true_data],
+                        [1:length(tsteps)],
+                        [true_data])
     @test (AIC(res, odedata, MvNormal(zeros(length(u0)), σ^2 * LinearAlgebra.I)) isa Number)
 end
 

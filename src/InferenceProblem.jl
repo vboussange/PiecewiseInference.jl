@@ -36,6 +36,7 @@ function InferenceProblem(model::M,
                     u0_bij)
 end
 
+import ParametricModels: get_p, get_mp, get_tspan
 get_p(prob::InferenceProblem) = prob.p0
 get_p_bijector(prob::InferenceProblem) =prob.p_bij
 get_u0_bijector(prob::InferenceProblem) = prob.u0_bij

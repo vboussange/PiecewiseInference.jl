@@ -23,10 +23,8 @@ p_bij = (bijector(Uniform(1e-3, 5e0)),)
 u0_bij = bijector(Uniform(1e-3,5.))
 
 mp = ModelParams(; p = p_true, 
-                p_bij,
                 tspan,
                 u0, 
-                u0_bij,
                 alg = BS3(),
                 sensealg = ForwardDiffSensitivity(),
                 saveat = tsteps, 
@@ -34,15 +32,17 @@ mp = ModelParams(; p = p_true,
 model = MyModel(mp)
 sol_data = simulate(model)
 ode_data = Array(sol_data)
+
+
+infprob = InferenceProblem(model, p_init, p_bij, u0_bij)
 optimizers = [ADAM(0.001)]
 epochs = [4000]
 group_nb = 2
 batchsizes = [group_nb]
 @testset "piecewise MLE" begin
-    res = piecewise_MLE(p_init = p_init, 
+    res = piecewise_MLE(infprob;
                         group_nb = group_nb, 
-                        data_set = ode_data, 
-                        model = model, 
+                        data = ode_data, 
                         tsteps = tsteps, 
                         epochs = epochs, 
                         optimizers = optimizers,
@@ -55,10 +55,9 @@ end
 
 batchsizes = [1]
 @testset "piecewise MLE, SGD" begin
-    res = piecewise_MLE(p_init = p_init, 
+    res = piecewise_MLE(infprob;
                         group_nb = group_nb, 
-                        data_set = ode_data, 
-                        model = model, 
+                        data = ode_data, 
                         tsteps = tsteps, 
                         epochs = epochs, 
                         optimizers = optimizers,
@@ -72,10 +71,9 @@ end
 group_nb = 3
 batchsizes = [2]
 @testset "piecewise MLE, minibatch" begin
-    res = piecewise_MLE(p_init = p_init, 
+    res = piecewise_MLE(infprob; 
                         group_nb = group_nb, 
-                        data_set = ode_data, 
-                        model = model, 
+                        data = ode_data, 
                         tsteps = tsteps, 
                         epochs = epochs, 
                         optimizers = optimizers,
@@ -88,10 +86,9 @@ end
 
 @testset "MLE 1 group" begin
     ode_data_wnoise = ode_data .+ randn(size(ode_data)) .* 0.1
-    res = piecewise_MLE(p_init = p_init, 
+    res = piecewise_MLE(infprob;
                         group_nb = 1, 
-                        data_set = ode_data_wnoise, 
-                        model = model, 
+                        data = ode_data_wnoise, 
                         tsteps = tsteps, 
                         epochs = epochs, 
                         optimizers = optimizers,
@@ -105,10 +102,9 @@ end
     optimizers = [LBFGS()]
     epochs = [5000]
     ode_data_wnoise = ode_data .+ randn(size(ode_data)) .* 0.1
-    res = piecewise_MLE(p_init = p_init, 
+    res = piecewise_MLE(infprob; 
                         group_nb = 1, 
-                        data_set = ode_data_wnoise, 
-                        model = model, 
+                        data = ode_data_wnoise, 
                         tsteps = tsteps, 
                         epochs = epochs, 
                         optimizers = optimizers,
@@ -123,10 +119,9 @@ end
     epochs = [1000,200]
     batchsizes = [1,2]
     ode_data_wnoise = ode_data .+ randn(size(ode_data)) .* 0.1
-    res = piecewise_MLE(p_init = p_init, 
+    res = piecewise_MLE(infprob;
                         group_nb = 2, 
-                        data_set = ode_data_wnoise, 
-                        model = model, 
+                        data = ode_data_wnoise, 
                         tsteps = tsteps, 
                         epochs = epochs, 
                         optimizers = optimizers,
@@ -151,11 +146,10 @@ end
     optimizers = [ADAM(0.001)]
     epochs = [5000]
 
-    res = piecewise_ML_indep_TS(data_set = ode_datas, 
+    res = piecewise_ML_indep_TS(infprob,
+                        data = ode_datas, 
                         group_size = 31, 
                         tsteps = tsteps_arr, 
-                        p_init = p_init, 
-                        model = model, 
                         epochs = epochs, 
                         optimizers = optimizers,
                         )
@@ -187,12 +181,11 @@ end
     group_sizes = vcat(group_size_init, div_data[div_data .> group_size_init] .+ 1)
     optimizers_array = [[ADAM(0.001)] for _ in 1:length(group_sizes)]
     epochs = [5000]
-    res_array = iterative_piecewise_MLE(group_sizes = group_sizes, 
+    res_array = iterative_piecewise_MLE(infprob,
+                                        group_sizes = group_sizes, 
                                         optimizers_array = optimizers_array,
                                         epochs = epochs,
-                                        p_init = p_init,  
-                                        data_set = ode_data_wnoise, 
-                                        model = model, 
+                                        data = ode_data_wnoise, 
                                         tsteps = tsteps,)
     p_trained = get_p_trained(res_array[end])
     @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-1))

@@ -20,18 +20,20 @@ Container for ouputs of MLE.
 # Notes
 Uses bijectors to make sure to obtain correct parameter values
 """
-function InferenceResult(;model, 
-                        minloss = Inf, 
-                        p_trained = Float64[], 
-                        u0s_trained  = Vector{Float64}[], 
-                        pred = Array{Float64,2}[], 
-                        ranges = [], 
-                        losses = Float64[])
-    p_trained = inverse(get_p_bijector(model))(p_trained) # projecting p in true parameter space
-    p_tuple = get_re(model)(p_trained) # transforming in tuple
-    mp = get_mp(model)
+function InferenceResult(infprob::InferenceProblem, 
+                        minloss, 
+                        p_trained, 
+                        u0s_trained, 
+                        pred, 
+                        ranges, 
+                        losses)
+    model = get_model(infprob)
+    p_trained = inverse(get_p_bijector(infprob))(p_trained) # projecting p in true parameter space
+    p_tuple = get_re(infprob)(p_trained) # transforming in tuple
+    mp = ParametricModels.get_mp(model)
     mp = ParametricModels.remake(mp, p = p_tuple)
-    return InferenceResult(SciMLBase.remake(model, mp = mp), 
+    model = SciMLBase.remake(model, mp = mp)
+    return InferenceResult(model, 
                         minloss, 
                         p_trained, 
                         u0s_trained,
@@ -40,7 +42,7 @@ function InferenceResult(;model,
                         losses) #/!\ new{Model,RES}( is required! 
 end
 
-get_p_trained(res::InferenceResult) = get_p(res.model)
+get_p_trained(res::InferenceResult) = ParametricModels.get_p(res.model)
 
 # function construct_result(cm::CM, res::RES) where {CM <: ComposableModel, RES}
 #     _ps = res.p_trained

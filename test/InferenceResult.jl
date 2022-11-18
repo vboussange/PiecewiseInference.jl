@@ -36,10 +36,18 @@ ode_data = Array(sol_data)
 optimizers = [Adam(0.001)]
 epochs = [10]
 
+infprob = InferenceProblem(model, p_init, p_bij, u0_bij)
+
 
 @testset "`InferenceResult``" begin
-    p_trained = get_p_bijector(model)(destructure(p_init)[1])
-    res = InferenceResult(;model, p_trained)
+    p_trained = PiecewiseInference.get_p_bijector(infprob)(destructure(p_init)[1])
+    res = InferenceResult(infprob, 
+                        Inf,
+                        p_trained, 
+                        [u0],
+                        [true_data], 
+                        [1:length(tsteps)],
+                        [true_data])
     p_res = get_p_trained(res)
     @assert all(p_res[:b] .== p_init[:b])
 end
@@ -50,10 +58,9 @@ end
     ode_data_wn = Array(sol_data) 
     ode_data_wn .+=  randn(size(ode_data)) .* σ
 
-    res = piecewise_MLE(p_init = p_init, 
+    res = piecewise_MLE(infprob;
                         group_size = 101, 
-                        data_set = ode_data_wn, 
-                        model = model, 
+                        data = ode_data_wn, 
                         tsteps = tsteps, 
                         epochs = epochs, 
                         optimizers = optimizers,
@@ -75,11 +82,10 @@ end
         push!(ode_datas, ode_data)
     end
 
-    res = piecewise_ML_indep_TS(data_set = ode_datas, 
+    res = piecewise_ML_indep_TS(infprob;
+                        data = ode_datas, 
                         group_size = 31, 
                         tsteps = tsteps_arr, 
-                        p_init = p_init, 
-                        model = model, 
                         epochs = epochs, 
                         optimizers = optimizers,
                         )

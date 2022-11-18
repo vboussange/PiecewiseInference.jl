@@ -221,10 +221,9 @@ function _piecewise_MLE(infprob;
 
     # piecewise loss
     function _loss(θ, idx_rngs)
-        return piecewise_loss(θ, 
+        return piecewise_loss(infprob,θ, 
                             data, 
                             tsteps, 
-                            model, 
                             (data, params, pred, rg) -> loss_fn(data, params, pred, rg, ic_term),
                             ranges,
                             idx_rngs;
@@ -285,7 +284,7 @@ function _piecewise_MLE(infprob;
     
     minloss, pred = _loss(res.minimizer, idx_ranges...)
     p_trained = _get_param(res.minimizer, nb_group, dim_prob) |> collect
-    u0s_trained = _get_u0s(res.minimizer, nb_group, dim_prob, model)
+    u0s_trained = [_get_u0s(θ, model, i) for i in 1:nb_group]
 
 
     @info "Minimum loss for all batches: $minloss"
@@ -303,7 +302,7 @@ function _piecewise_MLE(infprob;
     end
     
     if save_pred
-        res = InferenceResult(;model,
+        res = InferenceResult(infprob,
                         minloss, 
                         p_trained,
                         u0s_trained,
@@ -311,10 +310,11 @@ function _piecewise_MLE(infprob;
                         ranges, 
                         losses)
     else
-        res = InferenceResult(;model,
+        res = InferenceResult(infprob,
                         minloss,
                         p_trained,
                         u0s_trained, 
+                        [],
                         ranges, 
                         losses,)
     end
@@ -378,12 +378,14 @@ function iterative_piecewise_MLE(infprob;group_sizes = nothing,
     # initialising results
     data = kwargs[:data]
     datasize = size(data,2)
-    model = get_model(infprob)
-    p_trained, _ = destructure(get_p(inf_prob))
-    res = InferenceResult(model = model,
-                        p_trained = p_trained,
-                        pred = [data], 
-                        ranges = [1:datasize])
+    p_trained, _ = destructure(get_p(infprob))
+    res = InferenceResult(infprob,
+                        Inf,
+                        p_trained,
+                        Vector{Float64}[],
+                        [data], 
+                        [1:datasize],
+                        Float64[])
     res_array = InferenceResult[]
 
     if !isnothing(group_sizes)
@@ -397,7 +399,7 @@ function iterative_piecewise_MLE(infprob;group_sizes = nothing,
         println("***************\nIterative training with $(length(ranges)) segment(s)\n***************")
 
         u0s_init = _initialise_u0s_iterative_piecewise_ML(res.pred,res.ranges,ranges)
-        tempres = _piecewise_MLE(inf_prob;
+        tempres = _piecewise_MLE(infprob;
                                 ranges = ranges, 
                                 optimizers = optimizers_array[i],
                                 u0s_init = u0s_init,
