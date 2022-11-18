@@ -33,28 +33,25 @@ function piecewise_loss(
     ranges::AbstractArray,
     idx_rngs;
     continuity_term::Real=0,
-    kwargs...
-)
+    )
     dim_prob = get_dims(model)
     nb_group = length(ranges)
     @assert length(θ) > nb_group * dim_prob "`params` should contain [u0;p]"
 
     params = _get_param(θ, nb_group, dim_prob) # params of the problem
-    u0s = _get_u0s(θ, nb_group, dim_prob, model)
 
     # Calculate multiple shooting loss
     loss = zero(eltype(θ))
     group_predictions = Vector{Array{eltype(θ)}}(undef, length(ranges))
     for i in idx_rngs
         rg = ranges[i]
-        u0_i = u0s[i] # taking absolute value, assuming populations cannot be negative
+        u0_i = _get_u0s(θ, model, i) # taking absolute value, assuming populations cannot be negative
         data = ode_data[:, rg]
         sol = simulate(model;
                         u0 = u0_i,
                         tspan = (tsteps[first(rg)], tsteps[last(rg)]), 
                         p = params, 
-                        saveat = tsteps[rg], 
-                        kwargshandle = KeywordArgError)
+                        saveat = tsteps[rg])
         # Abort and return infinite loss if one of the integrations failed
         sol.retcode == :Success && sol.retcode !== :Terminated ? nothing : return Inf, group_predictions
 
@@ -82,7 +79,7 @@ function piecewise_loss(
     ranges::AbstractArray,
     idx_rngs;
     kwargs...,
-)
+    )
 
     return piecewise_loss(
             θ,
@@ -111,8 +108,9 @@ function _get_param(θ, nb_group, dim_prob)
     return @view θ[nb_group * dim_prob + 1: end]
 end
 
-function _get_u0s(θ, nb_group, dim_prob, model)
+function _get_u0s(θ, model, i)
+    dim_prob = get_dims(model)
     # converting back to u0 space
     u0_bij⁻¹ = inverse(get_u0_bijector(model))
-    return [u0_bij⁻¹(θ[dim_prob*(i-1)+1:dim_prob*i]) for i in 1:nb_group]
+    return u0_bij⁻¹(θ[dim_prob*(i-1)+1:dim_prob*i])
 end

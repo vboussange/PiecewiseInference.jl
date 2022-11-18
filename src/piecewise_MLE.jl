@@ -30,7 +30,7 @@ Returns a `InferenceResult`.
 - `p_init` : initial guess for parameters of `model`
 - `group_size` : size of segments
 - `group_nb`: alternatively to `group_size`, one can ask for a certain number of segments
-- `data_set` : data
+- `data` : data
 - `model` : a `ParametricModel`, from ParametricModels.jl.
 - `tsteps` : corresponding to data
 
@@ -41,7 +41,7 @@ Returns a `InferenceResult`.
     to the range of the piecewise wrt the initial data, and `ic_term` is a weight on the initial conditions. 
     `loss_fn` must transform the pred into the observables, with a function 
     `h` that maps the state variables to the observables. By default, `h` is taken as the identity.
-- `u0_init` : if not provided, we initialise from `data_set`
+- `u0_init` : if not provided, we initialise from `data`
 - `optimizers` : array of optimizers, e.g. `[Adam(0.01)]`
 - `epochs` : number of epochs, which length should match that of `optimizers`
 - `batchsizes`: array of batch size, which length should match that of `optimizers`
@@ -92,7 +92,7 @@ group_nb = 2
 batchsizes = [1]
 res = piecewise_MLE(p_init = p_init, 
                     group_nb = group_nb, 
-                    data_set = ode_data, 
+                    data = ode_data, 
                     model = model, 
                     tsteps = tsteps, 
                     epochs = epochs, 
@@ -101,31 +101,33 @@ res = piecewise_MLE(p_init = p_init,
                     )
 ```
 """
-function piecewise_MLE(;group_size = nothing, group_nb = nothing,  kwargs...)
-    datasize = size(kwargs[:data_set],2)
+function piecewise_MLE(infprob; group_size = nothing, group_nb = nothing,  kwargs...)
+    data = kwargs[:data]
+    datasize = size(data,2)
     ranges = get_ranges(;group_size, group_nb, datasize)
-    _piecewise_MLE(;ranges,  kwargs...)
+    _piecewise_MLE(infprob;ranges,  kwargs...)
 end
 
 """
 $(SIGNATURES)
 
-Similar to `piecewise_MLE` but for independent time series, where `data_set`
+Similar to `piecewise_MLE` but for independent time series, where `data`
 is a vector containing the independent arrays corresponding to the time series,
 and `tsteps` is a vector where each entry contains the time steps
 of the corresponding time series.
 """
-function piecewise_ML_indep_TS(;group_size = nothing, 
+function piecewise_ML_indep_TS(infprob;
+                                data,
+                                group_size = nothing, 
                                 group_nb = nothing,
-                                data_set::Vector, #many different initial conditions
                                 tsteps::Vector, #corresponding time steps
                                 save_pred = true, # saving prediction
                                 kwargs...)
-    @assert length(tsteps) == length(data_set) "Independent time series must be gathered as a Vector"
-    @assert all(size(data_set[1],1) .== size.(data_set, 1)) "Independent time series must have same state variable dimension"
+    @assert length(tsteps) == length(data) "Independent time series must be gathered as a Vector"
+    @assert all(size(data[1],1) .== size.(data, 1)) "Independent time series must have same state variable dimension"
 
-    datasize_arr = size.(data_set,2)
-    ranges_arr = [get_ranges(;group_size, group_nb, datasize = datasize_arr[i]) for i in 1:length(data_set)]
+    datasize_arr = size.(data,2)
+    ranges_arr = [get_ranges(;group_size, group_nb, datasize = datasize_arr[i]) for i in 1:length(data)]
     # updating to take into account the shift provoked by concatenating independent TS
     ranges_shift = cumsum(datasize_arr) # shift
     for i in 2:length(ranges_arr)
@@ -133,12 +135,13 @@ function piecewise_ML_indep_TS(;group_size = nothing,
             ranges_arr[i][j] = ranges_shift[i-1] .+ ranges_arr[i][j] #adding shift to the start of the range
         end
     end
-    data_set_cat = cat(data_set...,dims=2)
+    data_cat = cat(data...,dims=2)
     ranges_cat = vcat(ranges_arr...)
     tsteps_cat = vcat(tsteps...)
 
-    res = _piecewise_MLE(;ranges=ranges_cat,
-                        data_set=data_set_cat, 
+    res = _piecewise_MLE(infprob;
+                        ranges=ranges_cat,
+                        data=data_cat, 
                         tsteps=tsteps_cat, 
                         kwargs...,
                         continuity_term = 0.,) 
@@ -148,17 +151,17 @@ function piecewise_ML_indep_TS(;group_size = nothing,
                         # this must be carefully thought out.
         
     # reconstructing the problem with original format
-    ranges_arr = [get_ranges(;group_size, group_nb, datasize = datasize_arr[i]) for i in 1:length(data_set)]
+    ranges_arr = [get_ranges(;group_size, group_nb, datasize = datasize_arr[i]) for i in 1:length(data)]
     idx_res = [0;cumsum(length.(ranges_arr))]
 
     # group u0s in vector of u0s, 
     # [[u_0_TS1_1, ..., u_0_TS1_n],...,[u_0_TS1_1,...]]
-    u0s_trained_arr = [res.u0s_trained[idx_res[i]+1:idx_res[i+1]] for i in 1:length(data_set)]
+    u0s_trained_arr = [res.u0s_trained[idx_res[i]+1:idx_res[i+1]] for i in 1:length(data)]
     
     if save_pred
         # group back the time series in vector, to have
         # pred = [ [mibibatch_1_ts_1, mibibatch_2_ts_1...],  [mibibatch_1_ts_2, mibibatch_2_ts_2...] ...]
-        pred_arr = [res.pred[idx_res[i]+1:idx_res[i+1]] for i in 1:length(data_set)]
+        pred_arr = [res.pred[idx_res[i]+1:idx_res[i+1]] for i in 1:length(data)]
         res_arr = InferenceResult(res.model,
                             res.minloss,
                             res.p_trained,
@@ -178,12 +181,10 @@ function piecewise_ML_indep_TS(;group_size = nothing,
     return res_arr
 end
 
-function _piecewise_MLE(;p_init, 
-                        u0s_init = nothing, # provided by iterative_piecewise_MLE
-                        ranges, # provided by piecewise_MLE
-                        data_set, 
-                        model, 
-                        tsteps, 
+function _piecewise_MLE(infprob;
+                        data,
+                        tsteps,
+                        ranges, # provided by `piecewise_MLE`
                         loss_fn = _loss_multiple_shoot_init,
                         optimizers = [ADAM(0.01), BFGS(initial_stepnorm=0.01)],
                         epochs = [1000, 200],
@@ -195,14 +196,15 @@ function _piecewise_MLE(;p_init,
                         info_per_its=50,
                         cb = nothing,
                         threshold = 1e-16,
-                        save_pred = true, 
-                        kwargs...
+                        save_pred = true,
+                        u0s_init = nothing,
                         )
+    model = get_model(infprob)
     dim_prob = get_dims(model) #used by loss_nm
     idx_ranges = (1:length(ranges),) # idx of batches
 
     @assert (length(optimizers) == length(epochs) == length(batchsizes)) "`optimizers`, `epochs`, `batchsizes` must be of same length"
-    @assert (size(data_set,1) == dim_prob) "The dimension of the training data does not correspond to the dimension of the state variables. This probably means that the training data corresponds to observables different from the state variables. In this case, you need to provide manually `u0s_init`." 
+    @assert (size(data,1) == dim_prob) "The dimension of the training data does not correspond to the dimension of the state variables. This probably means that the training data corresponds to observables different from the state variables. In this case, you need to provide manually `u0s_init`." 
     for (i,opt) in enumerate(optimizers)
         OPT = typeof(opt)
         if OPT <: Union{Optim.AbstractOptimizer, Optim.Fminbox, Optim.SAMIN, Optim.ConstrainedOptimizer}
@@ -211,23 +213,22 @@ function _piecewise_MLE(;p_init,
     end
 
     # initialise p_init
-    p_init = _init_p(p_init, model)
+    p_init = get_p(infprob)
     # initialise u0s
-    u0s_init = _init_u0s(u0s_init, data_set, ranges, model)
+    u0s_init = _init_u0s(infprob, u0s_init, data, ranges)
     # trainable parameters
     θ = [u0s_init;p_init]
 
     # piecewise loss
     function _loss(θ, idx_rngs)
         return piecewise_loss(θ, 
-                            data_set, 
+                            data, 
                             tsteps, 
                             model, 
                             (data, params, pred, rg) -> loss_fn(data, params, pred, rg, ic_term),
                             ranges,
                             idx_rngs;
-                            continuity_term = continuity_term, 
-                            kwargs...)
+                            continuity_term = continuity_term)
     end
     __loss(x, p, idx_rngs=idx_ranges...) = _loss(x, idx_rngs) #used for the "Optimization function"
 
@@ -248,7 +249,7 @@ function _piecewise_MLE(;p_init,
             if length(losses)%info_per_its==0
                 plot_convergence(losses, 
                                 pred, 
-                                data_set, 
+                                data, 
                                 ranges, 
                                 tsteps)
             end
@@ -294,7 +295,7 @@ function _piecewise_MLE(;p_init,
     if plotting
         plot_convergence(losses, 
                         pred, 
-                        data_set, 
+                        data, 
                         ranges, 
                         tsteps,
                         θs = θs, 
@@ -366,7 +367,7 @@ For kwargs, see `piecewise_MLE`.
 - `group_sizes` : array of group sizes to test
 - `optimizers_array`: optimizers_array[i] is an array of optimizers for the trainging processe of `group_sizes[i`
 """
-function iterative_piecewise_MLE(;group_sizes = nothing,
+function iterative_piecewise_MLE(infprob;group_sizes = nothing,
                                 group_nbs = nothing,
                                 optimizers_array,
                                 threshold = 1e-16,
@@ -375,13 +376,13 @@ function iterative_piecewise_MLE(;group_sizes = nothing,
     @assert length(group_sizes) == length(optimizers_array)
 
     # initialising results
-    data_set = kwargs[:data_set]
-    datasize = size(data_set,2)
-    model = kwargs[:model]
-    p_trained, _ = destructure(kwargs[:p_init])
+    data = kwargs[:data]
+    datasize = size(data,2)
+    model = get_model(infprob)
+    p_trained, _ = destructure(get_p(inf_prob))
     res = InferenceResult(model = model,
                         p_trained = p_trained,
-                        pred = [data_set], 
+                        pred = [data], 
                         ranges = [1:datasize])
     res_array = InferenceResult[]
 
@@ -396,7 +397,8 @@ function iterative_piecewise_MLE(;group_sizes = nothing,
         println("***************\nIterative training with $(length(ranges)) segment(s)\n***************")
 
         u0s_init = _initialise_u0s_iterative_piecewise_ML(res.pred,res.ranges,ranges)
-        tempres = _piecewise_MLE(;ranges = ranges, 
+        tempres = _piecewise_MLE(inf_prob;
+                                ranges = ranges, 
                                 optimizers = optimizers_array[i],
                                 u0s_init = u0s_init,
                                 threshold = threshold,
@@ -456,22 +458,16 @@ function __solve(opt::OPT, optprob, idx_ranges, batchsizes, epochs, callback) wh
     return res
 end
 
-function _init_p(p_init, model)
-    p_init, _ = Optimisers.destructure(p_init)
-    p_init = get_p_bijector(model)(p_init) # projecting p_init in optimization space
-    return p_init
-end
-
 """
     $SIGNATURES
 `u0s_init` should come as a vector of u0, i.e. a vector of vector.
 We ouput it as a vector of scalar, after tranformation in the optimization space.
 """
-function _init_u0s(u0s_init, data_set, ranges, model)
-     # initialising with data_set if not provided
+function _init_u0s(infprob, u0s_init, data, ranges)
+     # initialising with data if not provided
      if isnothing(u0s_init) 
-        u0s_init = [data_set[:,first(rg)] for rg in ranges]
+        u0s_init = [data[:,first(rg)] for rg in ranges]
     end
-    u0s_init = [get_u0_bijector(model)(u0) for u0 in u0s_init] # projecting u0s_init in optimization space
+    u0s_init = [get_u0_bijector(infprob)(u0) for u0 in u0s_init] # projecting u0s_init in optimization space
     return vcat(u0s_init...)
 end

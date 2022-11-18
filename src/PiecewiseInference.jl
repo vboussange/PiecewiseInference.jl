@@ -26,6 +26,7 @@ module PiecewiseInference
     import Base.length
     length(::ParamFun{N}) where N = N
 
+    include("InferenceProblem.jl")
     include("InferenceResult.jl")
     include("utils.jl")
     include("piecewise_loss.jl")
@@ -37,7 +38,7 @@ module PiecewiseInference
         @require PyPlot="d330b81b-6aea-500a-939a-2ce795aea3ee" include("plot_convergence.jl")
     end
 
-    export ForwardDiffSensitivity # from DiffEqSensitivity
+    export InferenceProblem
     export ParamFun, InferenceResult, get_p_trained
     export group_ranges, AIC, AICc, AICc_TREE, moments!, moments, divisors
     export piecewise_loss

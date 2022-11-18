@@ -19,7 +19,6 @@ p_true = (b = [0.23, 0.5],)
 p_init= (b = [1., 2.],)
 
 p_bij = (bijector(Uniform(0.,3.)),)
-# u0_bij = bijector(Uniform(0.,5.))
 u0_bij = bijector(Uniform(0.,5.))
 
 u0 = ones(2)
@@ -37,9 +36,10 @@ optimizers = [Adam(0.001)]
 epochs = [10]
 
 
-@testset "`InferenceResult``" begin
+@testset "`InferenceProblem``" begin
+    infprob = InferenceProblem(model, p_init, p_bij, u0s_bij)
     p_trained = get_p_bijector(model)(destructure(p_init)[1])
-    res = InferenceResult(;model, p_trained)
+    res = InferenceResult(;model,p_trained)
     p_res = get_p_trained(res)
     @assert all(p_res[:b] .== p_init[:b])
 end
