@@ -38,7 +38,7 @@ module PiecewiseInference
         @require PyPlot="d330b81b-6aea-500a-939a-2ce795aea3ee" include("plot_convergence.jl")
     end
 
-    export InferenceProblem
+    export InferenceProblem, get_p, get_p_bijector, get_u0_bijector, get_re, get_tspan, get_model, get_mp
     export ParamFun, InferenceResult, get_p_trained
     export group_ranges, AIC, AICc, AICc_TREE, moments!, moments, divisors
     export piecewise_loss

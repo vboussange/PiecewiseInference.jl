@@ -56,25 +56,23 @@ Returns a `InferenceResult`.
 
 # Examples
 ```julia
-
-using LinearAlgebra, ParametricModels, DiffEqSensitivity
-using UnPack
-using OptimizationOptimisers, OptimizationFlux
+using DiffEqSensitivity # provides diffential equation sensitivity methods
+using UnPack # provides the utility macro @unpack 
+using OptimizationOptimisers, OptimizationFlux # provide the optimizers
+using LinearAlgebra
+using ParametricModels
 using PiecewiseInference
-using DiffEqSensitivity: ForwardDiffSensitivity
-
+using OrdinaryDiffEq
+using Distributions, Bijectors # used to constrain parameters and initial conditions
 @model MyModel
 function (m::MyModel)(du, u, p, t)
     @unpack b = p
     du .=  0.1 .* u .* ( 1. .- b .* u) 
 end
-
 tsteps = 1.:0.5:100.5
 tspan = (tsteps[1], tsteps[end])
-
 p_true = (b = [0.23, 0.5],)
 p_init= (b = [1., 2.],)
-
 # Defining the model
 # Pay attention to the semi column before the parameters for `ModelParams`
 u0 = ones(2)
@@ -90,14 +88,15 @@ sol_data = ParametricModels.simulate(model)
 ode_data = Array(sol_data)
 # Define the `InferenceProblem`
 # First specifiy which values can the parameter take with bijectors
+# here, `b` is constrained to be ∈ [1e-3, 5e0] and `u0` ∈ [1e-3, 5.]
 p_bij = (bijector(Uniform(1e-3, 5e0)),)
 u0_bij = bijector(Uniform(1e-3,5.))
 infprob = InferenceProblem(model, p_init, p_bij, u0_bij)
-
 optimizers = [ADAM(0.001)]
 epochs = [5000]
 group_nb = 2
-batchsizes = [1]
+batchsizes = [1] # batch size used for each optimizer in optimizers (here only one)
+# you could also have `batchsizes = [group_nb]`
 res = piecewise_MLE(infprob,
                     group_nb = group_nb, 
                     data = ode_data, 
@@ -106,6 +105,9 @@ res = piecewise_MLE(infprob,
                     optimizers = optimizers,
                     batchsizes = batchsizes,
                     )
+
+p_trained = get_p_trained(res)
+pred = res.pred
 ```
 """
 function piecewise_MLE(infprob; group_size = nothing, group_nb = nothing,  kwargs...)
