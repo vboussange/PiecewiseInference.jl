@@ -298,7 +298,7 @@ function _piecewise_MLE(infprob;
 
     @info "Minimum loss for all batches: $minloss"
     if !isnothing(cb)
-        cb(θs, p_trained, losses, pred, ranges)
+        cb(p_trained, losses, pred, ranges)
     end
     if plotting
         plot_convergence(losses, 
