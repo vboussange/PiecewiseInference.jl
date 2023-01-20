@@ -56,7 +56,7 @@ Returns a `InferenceResult`.
 
 # Examples
 ```julia
-using DiffEqSensitivity # provides diffential equation sensitivity methods
+using SciMLSensitivity # provides diffential equation sensitivity methods
 using UnPack # provides the utility macro @unpack 
 using OptimizationOptimisers, OptimizationFlux # provide the optimizers
 using LinearAlgebra

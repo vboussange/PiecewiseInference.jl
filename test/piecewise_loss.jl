@@ -1,5 +1,5 @@
 using PiecewiseInference, Test, ForwardDiff, OrdinaryDiffEq
-using DiffEqSensitivity:ForwardDiffSensitivity
+using SciMLSensitivity:ForwardDiffSensitivity
 using OptimizationOptimJL:BFGS
 using OptimizationOptimisers:Adam
 using ParametricModels

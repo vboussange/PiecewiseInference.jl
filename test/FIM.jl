@@ -5,7 +5,7 @@ FIM from strouwn and the one from Yazdani.
 We test this on the coupled logistic map
 =#
 using OrdinaryDiffEq
-using DiffEqSensitivity
+using SciMLSensitivity
 using Test
 
 # Create a name for saving ( basically a prefix )

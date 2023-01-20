@@ -1,4 +1,4 @@
-using LinearAlgebra, ParametricModels, OrdinaryDiffEq, DiffEqSensitivity
+using LinearAlgebra, ParametricModels, OrdinaryDiffEq, SciMLSensitivity
 using Bijectors: Exp, inverse, Identity, Stacked
 using UnPack
 using OptimizationOptimisers, OptimizationFlux, OptimizationOptimJL
