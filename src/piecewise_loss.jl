@@ -1,27 +1,25 @@
 """
 $(SIGNATURES)
 
-Returns a tuple (`loss`, `pred`) obtained from piecewiseing of the 
-time series `ode_data` into segments with time steps given by `tsteps[ranges[i]]`.
+Returns a tuple (`loss`, `pred`) based on the segmentation of `ode_data` 
+into segments with time steps given by `tsteps[ranges[i]]`.
 The initial conditions are assumed free parameters for each segments.
-! the dynamics is assumed to lie in R⁺ !
 
 # Arguments:
+  - `infprob`: the inference problem
   - `θ`: [u0,p] where `p` corresponds to the parameters of ode function.
   - `ode_data`: Original Data to be modelled.
   - `tsteps`: Timesteps on which ode_data was calculated.
-  - `model`: ODE model
   - `loss_function`: A function to calculate loss, of the form `loss_function(data, params, pred, rg)`
   - `continuity_loss`: Function that takes states ``pred[:,ranges[k][end]]`` and
   ``data[:,ranges[k+1][1]]}`` as input and calculates prediction continuity loss
   between them.
   If no custom `continuity_loss` is specified, `sum(abs, û_end - u_0)` is used.
   - `ranges`: Vector containg range for each segment.
+  - `idx_rngs`: Vector containing the indices of the segments to be included in the loss
   - `continuity_term`: Weight term to ensure continuity of predictions throughout
     different groups.
-# Note:
-The parameter 'continuity_term' should be a relatively big number to enforce a large penalty
-whenever the last point of any group doesn't coincide with the first point of next group.
+
 """
 function piecewise_loss(
     infprob::InferenceProblem,
