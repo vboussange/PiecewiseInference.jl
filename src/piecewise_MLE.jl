@@ -5,7 +5,7 @@ $(SIGNATURES)
 
 default loss function for `piecewise_MLE`.
 """
-function _loss_multiple_shoot_init(data, params, pred, rg, ic_term)
+function _loss_multiple_shoot_init(data, pred, rg, ic_term)
     l =  mean((data - pred).^2)
     l +=  mean((data[:,1] - pred[:,1]).^2) * ic_term # putting more weights on initial conditions
     return l

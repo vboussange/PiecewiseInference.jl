@@ -48,7 +48,7 @@ infprob = InferenceProblem(model, p_init, p_bij, u0_bij)
                         [1:length(tsteps)],
                         [ode_data])
     p_res = get_p_trained(res)
-    @assert all(p_res[:b] .== p_init[:b])
+    @test all(p_res[:b] .== p_init[:b])
 end
 
 @testset "`InferenceResult`` from `piecewise_ML`" begin
