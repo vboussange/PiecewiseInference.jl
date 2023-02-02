@@ -190,3 +190,25 @@ end
     @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-1))
     @test length(res_array[end].losses) == sum(epochs) + 1
 end
+
+
+@testset "piecewise MLE, SGD, with priors" begin
+    batchsizes = [3]
+
+    param_distrib = Dict(:b => MvNormal([0.23, 0.4], [2., 2.]))
+    param_prior(p) = param_prior_from_dict(p, param_distrib)
+
+    infprob = InferenceProblem(model, p_init; p_bij, u0_bij, param_prior)
+
+    res = piecewise_MLE(infprob;
+                        group_nb = group_nb, 
+                        data = ode_data, 
+                        tsteps = tsteps, 
+                        epochs = epochs, 
+                        optimizers = optimizers,
+                        batchsizes = batchsizes,
+                        )
+    p_trained = get_p_trained(res)
+    @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-3 ))
+    @test length(res.losses) == sum(epochs) + 1
+end

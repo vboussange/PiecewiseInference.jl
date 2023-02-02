@@ -205,11 +205,11 @@ $SIGNATURES
 - `params`: params, in the form of NamedTuple
 - `param_distrib`: in the form of a dictionary, with entries `p::String` => "d::Distribution"
 """
-function prior_params(params, param_distrib)
+function param_prior_from_dict(params, param_distrib::Dict)
     l = 0.
     # parameter prior
-    for k in keys(prior_param)
-        l += logpdf(prior_param[k], params[k])
+    for k in keys(params)
+        l += logpdf(param_distrib[k], params[k])
     end
     return l
 end

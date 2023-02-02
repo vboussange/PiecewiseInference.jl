@@ -181,7 +181,7 @@ function _piecewise_MLE(infprob;
                         plotting = false,
                         info_per_its=50,
                         cb = nothing,
-                        threshold = 1e-16,
+                        threshold = -Inf,
                         save_pred = true,
                         u0s_init = nothing,
                         )
@@ -267,10 +267,10 @@ function _piecewise_MLE(infprob;
         u0 = res.minimizer
     end
     
-    minloss, pred = _loss(res.minimizer, idx_ranges...)
-    p_trained = _get_param(infprob, res.minimizer, nb_group)
+    minloss, pred = _loss(u0, idx_ranges...)
+    p_trained = _get_param(infprob, u0, nb_group)
 
-    u0s_trained = [_get_u0s(infprob, res.minimizer, i, nb_group) for i in 1:nb_group]
+    u0s_trained = [_get_u0s(infprob, u0, i, nb_group) for i in 1:nb_group]
 
     @info "Minimum loss for all batches: $minloss"
     if !isnothing(cb)
