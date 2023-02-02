@@ -179,3 +179,22 @@ function divisors(n)
     end
     return sort!(divs)
 end
+
+"""
+$SIGNATURES
+
+Prints in a nice format the NamedTuple or Dict `p_trained`.
+If `p_true` provided, also display its values for comparisions.
+"""
+function pretty_print(p_trained, p_true = nothing)
+    for k in keys(p_trained)
+        println(k, "_trained = ")
+        display(p_trained[k])
+        println("")
+        if !isnothing(p_true)
+            println(k,  "true = ")
+            display(p_true[k])
+        end
+        println("*********")
+    end
+end

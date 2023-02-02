@@ -293,7 +293,7 @@ function _piecewise_MLE(infprob;
     
     minloss, pred = _loss(res.minimizer, idx_ranges...)
     p_trained = _get_param(infprob, res.minimizer, nb_group)
-    @show p_trained
+
     u0s_trained = [_get_u0s(infprob, res.minimizer, i, nb_group) for i in 1:nb_group]
 
     @info "Minimum loss for all batches: $minloss"
