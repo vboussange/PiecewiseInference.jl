@@ -1,10 +1,10 @@
 using LinearAlgebra, ParametricModels, OrdinaryDiffEq, SciMLSensitivity
-using Bijectors: Exp, inverse, Identity, Stacked, bijector
 using UnPack
 using OptimizationOptimisers
 using Test
 using PiecewiseInference
 using Distributions
+using Bijectors
 
 @model MyModel
 function (m::MyModel)(du, u, p, t)

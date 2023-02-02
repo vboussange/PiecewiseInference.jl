@@ -38,6 +38,7 @@ function piecewise_loss(
     @assert length(θ) > nb_group * dim_prob "`params` should contain [u0;p]"
 
     params = _get_param(infprob, θ, nb_group) # params of the problem
+    param_prior = get_param_prior(infprob)
 
     # Calculate multiple shooting loss
     loss = zero(eltype(θ))
@@ -52,7 +53,7 @@ function piecewise_loss(
         sol.retcode == :Success && sol.retcode !== :Terminated ? nothing : return Inf, group_predictions
 
         pred = sol |> Array
-        loss += loss_function(data, params, pred, rg)
+        loss += loss_function(data, pred, rg)
         group_predictions[i] = pred
 
         if i < nb_group && continuity_term > 0.0
@@ -62,6 +63,8 @@ function piecewise_loss(
                 continuity_term * continuity_loss(pred[:, end], ode_data[:, first(ranges[i+1])])
         end
     end
+    # adding priors
+    loss += prior_params(params, param_prior)
 
     return loss, group_predictions
 end
@@ -116,4 +119,23 @@ function _get_u0s(infprob::InferenceProblem, θ, i, nb_group)
     # projecting in true parameter space
     u0 = inverse(get_u0_bijector(infprob))(ũ0)
     return u0
+end
+
+"""
+$SIGNATURES
+
+- `params`: params, in the form of NamedTuple
+- `param_distrib`: in the form of a dictionary, with entries `p::String` => "d::Distribution"
+"""
+function prior_params(params, param_distrib)
+    l = 0.
+    # parameter prior
+    for k in keys(prior_param)
+        l += logpdf(prior_param[k], params[k])
+    end
+    return l
+end
+
+function prior_params(params, param_distrib::Nothing)
+    return 0.
 end

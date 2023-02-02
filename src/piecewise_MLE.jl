@@ -233,7 +233,7 @@ function _piecewise_MLE(infprob;
         return piecewise_loss(infprob,θ, 
                             data, 
                             tsteps, 
-                            (data, params, pred, rg) -> loss_fn(data, params, pred, rg, ic_term),
+                            (data, pred, rg) -> loss_fn(data, pred, rg, ic_term),
                             ranges,
                             idx_rngs;
                             continuity_term = continuity_term)
