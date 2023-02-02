@@ -28,7 +28,7 @@ mp = ModelParams(;p = p_true,
 model = MyModel(mp)
 sol = simulate(model)
 true_data = sol |> Array
-infprob = InferenceProblem(model, p_init, p_bij, u0_bij)
+infprob = InferenceProblem(model, p_init; p_bij, u0_bij)
 
 @testset "likelihood normal" begin
     σ_estim(L, N, M) = exp(-(2 * L / N / M + 1)) / 2 / pi

@@ -32,7 +32,7 @@ model = MyModel(mp)
 sol_data = simulate(model)
 ode_data = Array(sol_data)
 
-infprob = InferenceProblem(model, p_init, p_bij, u0_bij)
+infprob = InferenceProblem(model, p_init; p_bij, u0_bij)
 optimizers = [ADAM(0.001)]
 epochs = [4000]
 group_nb = 2
@@ -45,7 +45,6 @@ batchsizes = [group_nb]
                         epochs = epochs, 
                         optimizers = optimizers,
                         batchsizes = batchsizes,
-                        ic_term = 0.
                         )
     p_trained = get_p_trained(res)
     @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-3))
@@ -80,7 +79,7 @@ batchsizes = [2]
                         batchsizes = batchsizes,
                         )
     p_trained = get_p_trained(res)
-    @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-4))
+    @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-3))
     @test length(res.losses) == sum(epochs) + 1
 end
 

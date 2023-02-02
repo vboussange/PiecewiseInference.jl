@@ -32,8 +32,6 @@ model = MyModel(mp)
 sol_data = simulate(model)
 ode_data = Array(sol_data)
 
-loss_function(data, pred, rg) = sum(abs2, data - pred)
-
 # making sure we have good data
 # figure()
 # plot(tsteps, sol_data')
@@ -46,7 +44,6 @@ infprob = InferenceProblem(model, p_init)
                         θ, 
                         ode_data, 
                         tsteps, 
-                        loss_function, 
                         ranges,
                         1:length(ranges))
     @test isa(l, Number)
@@ -58,7 +55,6 @@ end
                                 θ, 
                                 ode_data, 
                                 tsteps, 
-                                loss_function, 
                                 ranges,
                                 1:length(ranges))[1]
     l = _loss(θ)

@@ -36,7 +36,7 @@ ode_data = Array(sol_data)
 optimizers = [Adam(0.001)]
 epochs = [10]
 
-infprob = InferenceProblem(model, p_init, p_bij, u0_bij)
+infprob = InferenceProblem(model, p_init; p_bij, u0_bij)
 
 
 @testset "`InferenceResult``" begin

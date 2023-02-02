@@ -22,23 +22,23 @@ The initial conditions are assumed free parameters for each segments.
 
 """
 function piecewise_loss(
-    infprob::InferenceProblem,
-    θ::AbstractArray,
-    ode_data::AbstractArray,
-    tsteps::AbstractArray,
-    loss_function,
-    continuity_loss,
-    ranges::AbstractArray,
-    idx_rngs;
-    continuity_term::Real=0
-)
+                        infprob::InferenceProblem,
+                        θ::AbstractArray,
+                        ode_data::AbstractArray,
+                        tsteps::AbstractArray,
+                        ranges::AbstractArray,
+                        idx_rngs)
+
     model = get_model(infprob)
     dim_prob = get_dims(model)
     nb_group = length(ranges)
+    ll = get_ll(infprob)
+    u0_prior = get_u0_prior(infprob)
+    param_prior = get_param_prior(infprob)
+
     @assert length(θ) > nb_group * dim_prob "`params` should contain [u0;p]"
 
     params = _get_param(infprob, θ, nb_group) # params of the problem
-    param_prior = get_param_prior(infprob)
 
     # Calculate multiple shooting loss
     loss = zero(eltype(θ))
@@ -53,51 +53,15 @@ function piecewise_loss(
         sol.retcode == :Success && sol.retcode !== :Terminated ? nothing : return Inf, group_predictions
 
         pred = sol |> Array
-        loss += loss_function(data, pred, rg)
+        loss += ll(data, pred, rg)
+        loss += u0_prior(data[:,1], u0_i)
         group_predictions[i] = pred
 
-        if i < nb_group && continuity_term > 0.0
-            # Ensure continuity between last state in previous prediction
-            # and current initial condition in ode_data
-            loss +=
-                continuity_term * continuity_loss(pred[:, end], ode_data[:, first(ranges[i+1])])
-        end
     end
     # adding priors
-    loss += prior_params(params, param_prior)
+    loss += param_prior(params)
 
     return loss, group_predictions
-end
-
-function piecewise_loss(
-    infprob::InferenceProblem,
-    θ::AbstractArray,
-    ode_data::AbstractArray,
-    tsteps::AbstractArray,
-    loss_function::Function,
-    ranges::AbstractArray,
-    idx_rngs;
-    kwargs...
-)
-
-    return piecewise_loss(
-        infprob,
-        θ,
-        ode_data,
-        tsteps,
-        loss_function,
-        _default_continuity_loss,
-        ranges,
-        idx_rngs;
-        kwargs...
-    )
-end
-
-# Default ontinuity loss between last state in previous prediction
-# and current initial condition in ode_data
-function _default_continuity_loss(û_end::AbstractArray,
-    u_0::AbstractArray)
-    return mean((û_end - u_0) .^ 2)
 end
 
 # projecting θ in optimization space to param in Tuple form in true parameter space
@@ -119,23 +83,4 @@ function _get_u0s(infprob::InferenceProblem, θ, i, nb_group)
     # projecting in true parameter space
     u0 = inverse(get_u0_bijector(infprob))(ũ0)
     return u0
-end
-
-"""
-$SIGNATURES
-
-- `params`: params, in the form of NamedTuple
-- `param_distrib`: in the form of a dictionary, with entries `p::String` => "d::Distribution"
-"""
-function prior_params(params, param_distrib)
-    l = 0.
-    # parameter prior
-    for k in keys(prior_param)
-        l += logpdf(prior_param[k], params[k])
-    end
-    return l
-end
-
-function prior_params(params, param_distrib::Nothing)
-    return 0.
 end

@@ -66,7 +66,9 @@ get_model(prob::InferenceProblem) = prob.m
 get_mp(prob::InferenceProblem) = get_mp(get_model(prob))
 import ParametricModels.get_dims
 get_dims(prob::InferenceProblem) = get_dims(get_model(prob))
+get_ll(prob::InferenceProblem) = prob.ll
 get_param_prior(prob::InferenceProblem) = prob.param_prior
+get_u0_prior(prob::InferenceProblem) = prob.u0_prior
 
 #=
 Default priors and likelihoods
