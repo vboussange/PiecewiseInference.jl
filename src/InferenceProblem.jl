@@ -44,4 +44,5 @@ get_re(prob::InferenceProblem) = prob.re
 get_tspan(prob::InferenceProblem) = get_tspan(prob.m)
 get_model(prob::InferenceProblem) = prob.m
 get_mp(prob::InferenceProblem) = get_mp(get_model(prob))
+import ParametricModels.get_dims
 get_dims(prob::InferenceProblem) = get_dims(get_model(prob))
