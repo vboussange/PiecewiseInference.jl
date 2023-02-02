@@ -15,9 +15,7 @@ function plot_convergence(losses,
                             pred, 
                             data_set,
                             ranges, 
-                            tsteps;
-                            p_trained = [],
-                            )
+                            tsteps)
 
     PyPlot.close("all")
     dim_prob = size(data_set,1)

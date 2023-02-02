@@ -28,10 +28,8 @@ function InferenceResult(infprob::InferenceProblem,
                         ranges, 
                         losses)
     model = get_model(infprob)
-    p_trained = inverse(get_p_bijector(infprob))(p_trained) # projecting p in true parameter space
-    p_tuple = get_re(infprob)(p_trained) # transforming in tuple
     mp = ParametricModels.get_mp(model)
-    mp = ParametricModels.remake(mp, p = p_tuple)
+    mp = ParametricModels.remake(mp, p = p_trained)
     model = SciMLBase.remake(model, mp = mp)
     return InferenceResult(model, 
                         minloss, 

@@ -114,7 +114,7 @@ function piecewise_MLE(infprob; group_size = nothing, group_nb = nothing,  kwarg
     data = kwargs[:data]
     datasize = size(data,2)
     ranges = get_ranges(;group_size, group_nb, datasize)
-    _piecewise_MLE(infprob;ranges,  kwargs...)
+    _piecewise_MLE(infprob; ranges,  kwargs...)
 end
 
 """
@@ -246,7 +246,7 @@ function _piecewise_MLE(infprob;
     # Here we need a default behavior for Optimization.jl (see https://github.com/SciML/Optimization.jl/blob/c0a51120c7c54a89d091b599df30eb40c4c0952b/lib/OptimizationFlux/src/OptimizationFlux.jl#L53)
     callback(θ, l, pred=[]) = begin
         push!(losses, l)
-        p_trained = _get_param(θ,nb_group,dim_prob)
+        p_trained = _get_param(infprob, θ, nb_group)
 
         if length(losses)%info_per_its==0
             verbose_loss ? println("Current loss after $(length(losses)) iterations: $(losses[end])") : nothing
@@ -292,9 +292,9 @@ function _piecewise_MLE(infprob;
     end
     
     minloss, pred = _loss(res.minimizer, idx_ranges...)
-    p_trained = _get_param(res.minimizer, nb_group, dim_prob) |> collect
-    u0s_trained = [_get_u0s(θ, model, i) for i in 1:nb_group]
-
+    p_trained = _get_param(infprob, res.minimizer, nb_group)
+    @show p_trained
+    u0s_trained = [_get_u0s(infprob, res.minimizer, i, nb_group) for i in 1:nb_group]
 
     @info "Minimum loss for all batches: $minloss"
     if !isnothing(cb)
@@ -305,9 +305,7 @@ function _piecewise_MLE(infprob;
                         pred, 
                         data, 
                         ranges, 
-                        tsteps,
-                        θs = θs, 
-                        p_trained = p_trained)
+                        tsteps,)
     end
     
     if save_pred

@@ -30,24 +30,24 @@ function piecewise_loss(
     continuity_loss,
     ranges::AbstractArray,
     idx_rngs;
-    continuity_term::Real=0,
-    )
+    continuity_term::Real=0
+)
     model = get_model(infprob)
     dim_prob = get_dims(model)
     nb_group = length(ranges)
     @assert length(θ) > nb_group * dim_prob "`params` should contain [u0;p]"
 
-    params = _get_param(θ, nb_group, dim_prob) # params of the problem
+    params = _get_param(infprob, θ, nb_group) # params of the problem
 
     # Calculate multiple shooting loss
     loss = zero(eltype(θ))
     group_predictions = Vector{Array{eltype(θ)}}(undef, length(ranges))
     for i in idx_rngs
         rg = ranges[i]
-        u0_i = _get_u0s(θ, model, i) # taking absolute value, assuming populations cannot be negative
+        u0_i = _get_u0s(infprob, θ, i, nb_group) # taking absolute value, assuming populations cannot be negative
         data = ode_data[:, rg]
         tspan = (tsteps[first(rg)], tsteps[last(rg)])
-        sol = simulate(infprob, u0_i, tspan, params, tsteps[rg])
+        sol = simulate(model; u0 = u0_i, tspan = tspan, p = params, saveat = tsteps[rg])
         # Abort and return infinite loss if one of the integrations failed
         sol.retcode == :Success && sol.retcode !== :Terminated ? nothing : return Inf, group_predictions
 
@@ -55,7 +55,7 @@ function piecewise_loss(
         loss += loss_function(data, params, pred, rg)
         group_predictions[i] = pred
 
-        if i < nb_group && continuity_term > 0.
+        if i < nb_group && continuity_term > 0.0
             # Ensure continuity between last state in previous prediction
             # and current initial condition in ode_data
             loss +=
@@ -74,38 +74,46 @@ function piecewise_loss(
     loss_function::Function,
     ranges::AbstractArray,
     idx_rngs;
-    kwargs...,
-    )
+    kwargs...
+)
 
     return piecewise_loss(
-            infprob,
-            θ,
-            ode_data,
-            tsteps,
-            loss_function,
-            _default_continuity_loss,
-            ranges,
-            idx_rngs;
-            kwargs...,
-        )
+        infprob,
+        θ,
+        ode_data,
+        tsteps,
+        loss_function,
+        _default_continuity_loss,
+        ranges,
+        idx_rngs;
+        kwargs...
+    )
 end
 
 # Default ontinuity loss between last state in previous prediction
 # and current initial condition in ode_data
 function _default_continuity_loss(û_end::AbstractArray,
     u_0::AbstractArray)
-    return mean((û_end - u_0).^2)
+    return mean((û_end - u_0) .^ 2)
 end
 
-function _get_param(θ, nb_group, dim_prob)
-    # no need to convert to param space - 
-    # this is done by the `simulate` function when provided 
-    # with a param vector `p::AbstractArray`
-    return @view θ[nb_group * dim_prob + 1: end]
+# projecting θ in optimization space to param in Tuple form in true parameter space
+function _get_param(infprob::InferenceProblem, θ, nb_group)
+    dim_prob = get_dims(infprob)
+    p̃ = @view θ[nb_group*dim_prob+1:end]
+    # projecting p in true parameter space
+    p = inverse(get_p_bijector(infprob))(p̃) 
+    # converting to named tuple, for easy handling
+    p_tuple = get_re(infprob)(p)
+    return p_tuple
 end
 
-function _get_u0s(θ, model, i)
-    dim_prob = get_dims(model)
-    # converting back to u0 space
-    return θ[dim_prob*(i-1)+1:dim_prob*i]
+# projecting θ in optimization space to u0 for segment i in true parameter space
+function _get_u0s(infprob::InferenceProblem, θ, i, nb_group)
+    dim_prob = get_dims(infprob)
+    @assert 0 < i <= nb_group "trying to access undefined segment"
+    ũ0 = @view θ[dim_prob*(i-1)+1:dim_prob*i]
+    # projecting in true parameter space
+    u0 = inverse(get_u0_bijector(infprob))(ũ0)
+    return u0
 end

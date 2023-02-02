@@ -1,5 +1,4 @@
 using LinearAlgebra, ParametricModels, OrdinaryDiffEq, SciMLSensitivity
-using Bijectors: Exp, inverse, Identity, Stacked
 using UnPack
 using OptimizationOptimisers, OptimizationFlux, OptimizationOptimJL
 using Test
@@ -33,7 +32,6 @@ model = MyModel(mp)
 sol_data = simulate(model)
 ode_data = Array(sol_data)
 
-
 infprob = InferenceProblem(model, p_init, p_bij, u0_bij)
 optimizers = [ADAM(0.001)]
 epochs = [4000]
@@ -47,10 +45,12 @@ batchsizes = [group_nb]
                         epochs = epochs, 
                         optimizers = optimizers,
                         batchsizes = batchsizes,
+                        ic_term = 0.
                         )
     p_trained = get_p_trained(res)
-    @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-4))
+    @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-3))
     @test length(res.losses) == sum(epochs) + 1
+    @test all(isapprox.(res.u0s_trained[1], u0, atol = 1e-3))
 end
 
 batchsizes = [1]

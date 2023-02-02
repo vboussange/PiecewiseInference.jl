@@ -40,14 +40,13 @@ infprob = InferenceProblem(model, p_init, p_bij, u0_bij)
 
 
 @testset "`InferenceResult``" begin
-    p_trained = PiecewiseInference.get_p_bijector(infprob)(destructure(p_init)[1])
     res = InferenceResult(infprob, 
                         Inf,
-                        p_trained, 
+                        p_init, 
                         [u0],
-                        [true_data], 
+                        [ode_data], 
                         [1:length(tsteps)],
-                        [true_data])
+                        [ode_data])
     p_res = get_p_trained(res)
     @assert all(p_res[:b] .== p_init[:b])
 end

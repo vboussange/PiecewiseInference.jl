@@ -44,12 +44,4 @@ get_re(prob::InferenceProblem) = prob.re
 get_tspan(prob::InferenceProblem) = get_tspan(prob.m)
 get_model(prob::InferenceProblem) = prob.m
 get_mp(prob::InferenceProblem) = get_mp(get_model(prob))
-
-function simulate(prob::InferenceProblem, u0, tspan, p, saveat)
-    model = get_model(prob)
-    p = inverse(get_p_bijector(prob))(p) # projecting p in true parameter space
-    u0 = inverse(get_u0_bijector(prob))(u0) # projecting p in true parameter space
-    p_tuple = get_re(prob)(p)
-    sol = ParametricModels.simulate(model; p=p_tuple, u0, tspan, saveat)
-    return sol
-end
+get_dims(prob::InferenceProblem) = get_dims(get_model(prob))
