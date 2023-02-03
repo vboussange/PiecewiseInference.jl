@@ -205,7 +205,7 @@ $SIGNATURES
 - `params`: params, in the form of NamedTuple
 - `param_distrib`: in the form of a `Dictionary` or a `NamedTuple`, with entries `p::String` => "d::Distribution"
 """
-function loss_param_prior(params, param_distrib)
+function loss_param_prior_from_dict(params, param_distrib)
     l = 0.
     # parameter prior
     for k in keys(params)

@@ -2,9 +2,9 @@ Base.@kwdef struct InferenceProblem{M,P,RE,PP,U0P,LL,PB,UB}
     m::M
     p0::P
     re::RE
-    param_prior::PP
-    u0_prior::U0P
-    ll::LL
+    loss_param_prior::PP
+    loss_u0_prior::U0P
+    loss_likelihood::LL
     p_bij::PB
     u0_bij::UB
 end
@@ -18,26 +18,28 @@ $(SIGNATURES)
 - `p_bij`: a tuple with same length as `p0`, containing bijectors, to constrain parameter values.
 - `u0_bij`: a bijector for to constrain state variables `u0`.
 
-Optional
-- `param_prior`
-- `u0_prior`
-- `likelihood`
+## Optional
+- `loss_param_prior` is a function with arguments `p::NamedTuple`. 
+It is used during inference and should encapsulate priors
+- `loss_u0_prior` is a function with arguments `u0_pred, u0_data`. 
+- `loss_likelihood` is a function that matches the predictions and the data,
+which should have as arguments `data, pred, rng`.
 """
 function InferenceProblem(model::M, 
                             p0::T;
-                            p_bij = fill(Identity{0}(),length(p0)),
-                            u0_bij = Identity{0}(),
-                            param_prior = _default_param_prior,
-                            u0_prior = _default_u0_prior,
-                            ll = _default_likelihood) where {M <: AbstractModel, T<: NamedTuple}
+                            p_bij = fill(Identity(),length(p0)),
+                            u0_bij = Identity(),
+                            loss_param_prior = _default_param_prior,
+                            loss_u0_prior = _default_loss_u0_prior,
+                            loss_likelihood = _default_loss_likelihood) where {M <: AbstractModel, T<: NamedTuple}
     @assert p0 isa NamedTuple
     @assert eltype(p0) <: AbstractArray "The values of `p` must be arrays"
     @assert length(p_bij) == length(values(p0)) "Each element of `p_dist` should correspond to an entry of `p0`"
-    @assert param_prior(p0) isa Number
+    @assert loss_param_prior(p0) isa Number
     u0_pred = randn(get_dims(model)); u0_data = randn(get_dims(model));
-    @assert u0_prior(u0_pred, u0_data) isa Number
+    @assert loss_u0_prior(u0_pred, u0_data) isa Number
     data = randn(get_dims(model), 10); pred = randn(get_dims(model), 10)
-    @assert ll(data, pred, nothing) isa Number
+    @assert loss_likelihood(data, pred, nothing) isa Number
 
     lp = [0;length.(values(p0))...]
     idx_st = [sum(lp[1:i])+1:sum(lp[1:i+1]) for i in 1:length(lp)-1]
@@ -49,9 +51,9 @@ function InferenceProblem(model::M,
     InferenceProblem(model,
                     pflat,
                     re,
-                    param_prior,
-                    u0_prior, 
-                    ll,
+                    loss_param_prior,
+                    loss_u0_prior, 
+                    loss_likelihood,
                     p_bij,
                     u0_bij)
 end
@@ -66,19 +68,19 @@ get_model(prob::InferenceProblem) = prob.m
 get_mp(prob::InferenceProblem) = get_mp(get_model(prob))
 import ParametricModels.get_dims
 get_dims(prob::InferenceProblem) = get_dims(get_model(prob))
-get_ll(prob::InferenceProblem) = prob.ll
-get_param_prior(prob::InferenceProblem) = prob.param_prior
-get_u0_prior(prob::InferenceProblem) = prob.u0_prior
+get_loss_likelihood(prob::InferenceProblem) = prob.loss_likelihood
+get_loss_param_prior(prob::InferenceProblem) = prob.loss_param_prior
+get_loss_u0_prior(prob::InferenceProblem) = prob.loss_u0_prior
 
 #=
 Default priors and likelihoods
 =#
-function _default_likelihood(data, pred, rg)
+function _default_loss_likelihood(data, pred, rg)
     l = sum((data - pred).^2)
     return l
 end
 
-function _default_u0_prior(u0, u0data)
+function _default_loss_u0_prior(u0, u0data)
     l = sum((u0 .- u0data).^2)
     return l
 end

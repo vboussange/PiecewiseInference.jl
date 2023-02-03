@@ -7,8 +7,8 @@ The initial conditions are assumed free parameters for each segments.
 
 # Arguments:
   - `infprob`: the inference problem
-  - `θ`: [u0,p] where `p` corresponds to the parameters of ode function.
-  - `ode_data`: Original Data to be modelled.
+  - `θ`: [u0,p] where `p` corresponds to the parameters of ode function in the optimization space.
+  - `ode_data`: Original Data to be modeloss_likelihooded.
   - `tsteps`: Timesteps on which ode_data was calculated.
   - `loss_function`: A function to calculate loss, of the form `loss_function(data, params, pred, rg)`
   - `continuity_loss`: Function that takes states ``pred[:,ranges[k][end]]`` and
@@ -32,9 +32,9 @@ function piecewise_loss(
     model = get_model(infprob)
     dim_prob = get_dims(model)
     nb_group = length(ranges)
-    ll = get_ll(infprob)
-    u0_prior = get_u0_prior(infprob)
-    param_prior = get_param_prior(infprob)
+    loss_likelihood = get_loss_likelihood(infprob)
+    loss_u0_prior = get_loss_u0_prior(infprob)
+    loss_param_prior = get_loss_param_prior(infprob)
 
     @assert length(θ) > nb_group * dim_prob "`params` should contain [u0;p]"
 
@@ -44,6 +44,7 @@ function piecewise_loss(
     loss = zero(eltype(θ))
     group_predictions = Vector{Array{eltype(θ)}}(undef, length(ranges))
     for i in idx_rngs
+
         rg = ranges[i]
         u0_i = _get_u0s(infprob, θ, i, nb_group) # taking absolute value, assuming populations cannot be negative
         data = ode_data[:, rg]
@@ -53,13 +54,13 @@ function piecewise_loss(
         sol.retcode == :Success && sol.retcode !== :Terminated ? nothing : return Inf, group_predictions
 
         pred = sol |> Array
-        loss += ll(data, pred, rg)
-        loss += u0_prior(data[:,1], u0_i)
+        loss += loss_likelihood(data, pred, rg) # negative loglikelihood
+        loss += loss_u0_prior(data[:,1], u0_i) # negative log u0 priors
         group_predictions[i] = pred
 
     end
     # adding priors
-    loss += param_prior(params)
+    loss += loss_param_prior(params) # negative log param priors
 
     return loss, group_predictions
 end

@@ -34,6 +34,8 @@ Returns a `InferenceResult`.
 - `cb` : call back function.
     Must be of the form `cb(θs, p_trained, losses, pred, ranges)`
 - `threshold` : default to 1e-6
+- `save_pred = true` saves predictions
+- `save_losses = true` saves losses
 
 # Examples
 ```julia
@@ -112,6 +114,7 @@ function piecewise_ML_indep_TS(infprob;
                                 group_nb = nothing,
                                 tsteps::Vector, #corresponding time steps
                                 save_pred = true, # saving prediction
+                                save_losses = true, # saving prediction
                                 kwargs...)
     @assert length(tsteps) == length(data) "Independent time series must be gathered as a Vector"
     @assert all(size(data[1],1) .== size.(data, 1)) "Independent time series must have same state variable dimension"
@@ -151,22 +154,18 @@ function piecewise_ML_indep_TS(infprob;
         # group back the time series in vector, to have
         # pred = [ [mibibatch_1_ts_1, mibibatch_2_ts_1...],  [mibibatch_1_ts_2, mibibatch_2_ts_2...] ...]
         pred_arr = [res.pred[idx_res[i]+1:idx_res[i+1]] for i in 1:length(data)]
-        res_arr = InferenceResult(res.model,
+    else
+        pred_arr = nothing
+    end
+    save_losses ? losses = res.losses : losses = nothing
+
+    res_arr = InferenceResult(infprob,
                             res.minloss,
                             res.p_trained,
                             u0s_trained_arr, 
                             pred_arr, 
                             ranges_arr, 
-                            res.losses,)
-    else
-        res_arr = InferenceResult(res.model,
-                            res.minloss,
-                            res.p_trained,
-                            u0s_trained_arr,
-                            [], 
-                            ranges_arr, 
-                            res.losses,)
-    end
+                            losses,)
     return res_arr
 end
 
@@ -183,6 +182,7 @@ function _piecewise_MLE(infprob;
                         cb = nothing,
                         threshold = -Inf,
                         save_pred = true,
+                        save_losses = true,
                         u0s_init = nothing,
                         )
     model = get_model(infprob)
@@ -203,7 +203,7 @@ function _piecewise_MLE(infprob;
     # initialise u0s
     u0s_init = _init_u0s(infprob, u0s_init, data, ranges)
     # trainable parameters
-    θ = [u0s_init;p_init]
+    θ = [u0s_init; p_init]
 
     # piecewise loss
     function _loss(θ, idx_rngs)
@@ -284,23 +284,15 @@ function _piecewise_MLE(infprob;
                         tsteps,)
     end
     
-    if save_pred
-        res = InferenceResult(infprob,
-                        minloss, 
-                        p_trained,
-                        u0s_trained,
-                        pred, 
-                        ranges, 
-                        losses)
-    else
-        res = InferenceResult(infprob,
-                        minloss,
-                        p_trained,
-                        u0s_trained, 
-                        [],
-                        ranges, 
-                        losses,)
-    end
+    save_pred ? nothing : pred = nothing
+    save_losses ? nothing : losses = nothing
+    res = InferenceResult(infprob,
+                            minloss, 
+                            p_trained,
+                            u0s_trained,
+                            pred, 
+                            ranges, 
+                            losses,)
     return res
 end
 

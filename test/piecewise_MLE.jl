@@ -4,6 +4,7 @@ using OptimizationOptimisers, OptimizationFlux, OptimizationOptimJL
 using Test
 using PiecewiseInference
 using Bijectors
+import PiecewiseInference:loss_param_prior
 
 @model MyModel
 function (m::MyModel)(du, u, p, t)
@@ -194,11 +195,11 @@ end
 
 @testset "piecewise MLE, SGD, with priors" begin
     batchsizes = [3]
-
+    group_nb = 3
     param_distrib = Dict(:b => MvNormal([0.23, 0.4], [2., 2.]))
-    param_prior(p) = param_prior_from_dict(p, param_distrib)
+    loss_param_prior(p) = loss_param_prior_from_dict(p, param_distrib)
 
-    infprob = InferenceProblem(model, p_init; p_bij, u0_bij, param_prior)
+    infprob = InferenceProblem(model, p_init; p_bij, u0_bij, loss_param_prior)
 
     res = piecewise_MLE(infprob;
                         group_nb = group_nb, 
