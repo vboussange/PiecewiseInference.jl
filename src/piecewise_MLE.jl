@@ -427,7 +427,7 @@ end
 
 function __solve(opt::OPT, optprob, idx_ranges, batchsizes, epochs, callback) where OPT
     @info "Running optimizer $OPT"
-    train_loader = Flux.Data.DataLoader(idx_ranges; batchsize = batchsizes, shuffle = true, partial=false)
+    train_loader = Flux.DataLoader(idx_ranges; batchsize = batchsizes, shuffle = true, partial=false)
     res = Optimization.solve(optprob,
                             opt, 
                             ncycle(train_loader, epochs),

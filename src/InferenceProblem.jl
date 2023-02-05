@@ -27,8 +27,8 @@ which should have as arguments `data, pred, rng`.
 """
 function InferenceProblem(model::M, 
                             p0::T;
-                            p_bij = fill(Identity(),length(p0)),
-                            u0_bij = Identity(),
+                            p_bij = fill(identity,length(p0)),
+                            u0_bij = identity,
                             loss_param_prior = _default_param_prior,
                             loss_u0_prior = _default_loss_u0_prior,
                             loss_likelihood = _default_loss_likelihood) where {M <: AbstractModel, T<: NamedTuple}
