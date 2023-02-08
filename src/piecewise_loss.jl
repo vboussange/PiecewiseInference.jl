@@ -10,16 +10,8 @@ The initial conditions are assumed free parameters for each segments.
   - `θ`: [u0,p] where `p` corresponds to the parameters of ode function in the optimization space.
   - `ode_data`: Original Data to be modeloss_likelihooded.
   - `tsteps`: Timesteps on which ode_data was calculated.
-  - `loss_function`: A function to calculate loss, of the form `loss_function(data, params, pred, rg)`
-  - `continuity_loss`: Function that takes states ``pred[:,ranges[k][end]]`` and
-  ``data[:,ranges[k+1][1]]}`` as input and calculates prediction continuity loss
-  between them.
-  If no custom `continuity_loss` is specified, `sum(abs, û_end - u_0)` is used.
   - `ranges`: Vector containg range for each segment.
   - `idx_rngs`: Vector containing the indices of the segments to be included in the loss
-  - `continuity_term`: Weight term to ensure continuity of predictions throughout
-    different groups.
-
 """
 function piecewise_loss(
                         infprob::InferenceProblem,

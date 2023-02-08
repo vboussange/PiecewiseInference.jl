@@ -1,5 +1,10 @@
-function loglikelihood(data::Matrix, tsteps, ranges, infprob::InferenceProblem, pflat::Vector, u0s::Vector)
+"""
+$SIGNATURES
 
+Get loglikelihood of `infprob` evaluated at parameters `p` and ICs `u0s`.
+`tsteps, ranges` are required to recover the segments used.
+"""
+function loglikelihood(data::Matrix, tsteps, ranges, infprob::InferenceProblem, pflat::Vector, u0s::Vector)
     # projecting p and u0s in parameter space, 
     # to further use `piecewise_loss`
     p_bij = get_p_bijector(infprob)
@@ -26,10 +31,15 @@ function loglikelihood(data::Matrix, tsteps, ranges, infprob::InferenceProblem, 
 end
 
 """
-    Provides evidence `P(M|data)` for model `M` stored in `infprob` given the `data`, 
-    using MAP estimate `p` and `u0s`.
+$SIGNATURES
 
-    Relies on [Laplace's method](https://en.wikipedia.org/wiki/Laplace's_method)
+Provides evidence `p(M|data) = ∫p(data|M, θ) p(θ) p(M) dθ` for model `M` stored in `infprob` given the `data`, 
+using MAP estimate `p` and `u0s`. Here it is assumed that `p(M) = 1`.
+
+Relies on [Laplace's method](https://en.wikipedia.org/wiki/Laplace's_method)
+
+# Note
+For now, we do not integrate over initial conditions `u0s`, but this may be considered.
 """
 function get_evidence(data::Matrix, tsteps, ranges, infprob::InferenceProblem, p::NamedTuple, u0s::Vector)
     # To be completed

@@ -5,6 +5,7 @@ fontdict = Dict("size" => 16)
 """
 $(SIGNATURES)
 
+Utility function to live plot convergence of the inference process.
 Returns `fig, axs`
 
 # Optional

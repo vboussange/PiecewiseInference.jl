@@ -15,15 +15,16 @@ $(SIGNATURES)
 ## Args
 - `model`: a model of type `AbstractModel`.
 - `p0`: initial guess of the parameters. Should be a named tuple.
-- `p_bij`: a tuple with same length as `p0`, containing bijectors, to constrain parameter values.
-- `u0_bij`: a bijector for to constrain state variables `u0`.
 
 ## Optional
-- `loss_param_prior` is a function with arguments `p::NamedTuple`. 
-It is used during inference and should encapsulate priors
-- `loss_u0_prior` is a function with arguments `u0_pred, u0_data`. 
+- `p_bij`: a tuple with same length as `p0`, containing bijectors, to constrain parameter values.
+- `u0_bij`: a bijector for to constrain state variables `u0`.
+- `loss_param_prior` is a function with arguments `p::NamedTuple`. Should correspond to parameter priors.
+By default, `loss_param_prior(p) = 0`.
+- `loss_u0_prior` is a function with arguments `u0_pred, u0_data`. Should correspond to IC priors.
+By default it corresponds to RSS between `u0` and the corresponding data point.
 - `loss_likelihood` is a function that matches the predictions and the data,
-which should have as arguments `data, pred, rng`.
+which should have as arguments `data, pred, rng`. By default, it corresponds to the RSS.
 """
 function InferenceProblem(model::M, 
                             p0::T;

@@ -2,9 +2,6 @@
     $(SIGNATURES)
 
 Container for ouputs of MLE.
-
-# Notes
-Uses bijectors to make sure to obtain correct parameter values
 """
 
 struct InferenceResult{IP,M,P,U0,Pr,R,L}
@@ -19,6 +16,6 @@ struct InferenceResult{IP,M,P,U0,Pr,R,L}
     losses::L # vector storing all loss values throughout the iterations, can be stored or not
 end
 import Base.show
-Base.show(io::IO, res::InferenceResult) = println(io, "`InferenceResult` with model ", name(res.infprob.model))
+Base.show(io::IO, res::InferenceResult) = println(io, "`InferenceResult` with model ", name(get_model(res.infprob)))
 
 get_p_trained(res::InferenceResult) = res.p_trained

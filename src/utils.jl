@@ -202,6 +202,7 @@ end
 """
 $SIGNATURES
 
+Returns the loglikelihood of `params` given the prior distribution of the parameters `param_distrib`
 - `params`: params, in the form of NamedTuple
 - `param_distrib`: in the form of a `Dictionary` or a `NamedTuple`, with entries `p::String` => "d::Distribution"
 """
