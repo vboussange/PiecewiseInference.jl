@@ -51,25 +51,26 @@ jobs:
   docs:
     name: Documentation
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      statuses: write
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
         with:
           version: '1'
-      - run: |
-          julia --project=docs -e '
-            using Pkg
-            pkg"registry add https://github.com/vboussange/VBoussangeRegistry.git"
-            Pkg.develop(PackageSpec(path=pwd()))
-            Pkg.instantiate()'
-      - run: |
-          julia --project=docs -e '
-            using Documenter: doctest
-            using PiecewiseInference    
-            doctest(PiecewiseInference)'
-      - run: julia --project=docs docs/make.jl
+      - run: | # not sure whether this bit is required
+          julia --project=. --print '
+          using Pkg
+          pkg"registry add https://github.com/vboussange/VBoussangeRegistry.git"
+          '
+      - uses: julia-actions/julia-buildpkg@v1
+      - uses: julia-actions/julia-docdeploy@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
-      - uses: julia-actions/julia-processcoverage@v1
-      - uses: codecov/codecov-action@v1
+      - run: |
+          julia --project=docs -e '
+            using Documenter: DocMeta, doctest
+            using PiecewiseInference
+            DocMeta.setdocmeta!(PiecewiseInference, :DocTestSetup, :(using PiecewiseInference); recursive=true)
+            doctest(PiecewiseInference)'
