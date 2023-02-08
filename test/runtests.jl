@@ -12,6 +12,7 @@ using Distributions
     include("piecewise_loss.jl")
     include("piecewise_MLE.jl")
     include("statistics.jl")
+    include("evidence.jl")
 end
 
 if false # testing plot recipes

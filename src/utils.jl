@@ -198,3 +198,19 @@ function pretty_print(p_trained, p_true = nothing)
         println("*********")
     end
 end
+
+"""
+$SIGNATURES
+
+Returns the loglikelihood of `params` given the prior distribution of the parameters `param_distrib`
+- `params`: params, in the form of NamedTuple
+- `param_distrib`: in the form of a `Dictionary` or a `NamedTuple`, with entries `p::String` => "d::Distribution"
+"""
+function loss_param_prior_from_dict(params, param_distrib)
+    l = 0.
+    # parameter prior
+    for k in keys(params)
+        l += logpdf(param_distrib[k], reshape(params[k],:))
+    end
+    return - l
+end

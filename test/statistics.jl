@@ -14,7 +14,7 @@ tsteps = range(tspan[1], tspan[end], length=1000)
 
 p_true = (r = [0.5, 1.], b = [0.23, 0.5],)
 p_init= (r = [0.7, 1.2], b = [0.2, 0.2],)
-p_bij = (Identity{0}(), Identity{0}())
+p_bij = (identity, identity)
 u0 = ones(2)
 u0_bij = bijector(Uniform(1e-3,5.))
 
@@ -28,7 +28,7 @@ mp = ModelParams(;p = p_true,
 model = MyModel(mp)
 sol = simulate(model)
 true_data = sol |> Array
-infprob = InferenceProblem(model, p_init, p_bij, u0_bij)
+infprob = InferenceProblem(model, p_init; p_bij, u0_bij)
 
 @testset "likelihood normal" begin
     σ_estim(L, N, M) = exp(-(2 * L / N / M + 1)) / 2 / pi

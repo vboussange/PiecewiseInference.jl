@@ -14,7 +14,9 @@ module PiecewiseInference
     using LinearAlgebra
     using LaTeXStrings
     using UnPack
-    using Statistics, Distributions
+    using Statistics
+    using Distributions
+    import Distributions:loglikelihood #overwritten
 
     using ParametricModels
     using Optimisers, Flux
@@ -32,6 +34,7 @@ module PiecewiseInference
     include("piecewise_loss.jl")
     include("piecewise_MLE.jl")
     include("statistics.jl")
+    include("evidence.jl")
 
     plot_convergence(args...;kwargs...) = println("Plotting requires loading package `PyPlot`")
     function __init__()
@@ -44,5 +47,5 @@ module PiecewiseInference
     export piecewise_loss
     export piecewise_MLE, piecewise_ML_indep_TS, iterative_piecewise_MLE, get_ranges
     export plot_convergence
-    export FIM_strouwen, FIM_yazdani, loglikelihood, estimate_σ, RSS, R2, pretty_print
+    export FIM_strouwen, FIM_yazdani, loglikelihood, estimate_σ, RSS, R2, pretty_print, loss_param_prior_from_dict, get_evidence
 end # module

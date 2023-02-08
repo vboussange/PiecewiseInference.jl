@@ -1,10 +1,10 @@
 using LinearAlgebra, ParametricModels, OrdinaryDiffEq, SciMLSensitivity
-using Bijectors: Exp, inverse, Identity, Stacked, bijector
 using UnPack
 using OptimizationOptimisers
 using Test
 using PiecewiseInference
 using Distributions
+using Bijectors
 
 @model MyModel
 function (m::MyModel)(du, u, p, t)
@@ -36,7 +36,7 @@ ode_data = Array(sol_data)
 optimizers = [Adam(0.001)]
 epochs = [10]
 
-infprob = InferenceProblem(model, p_init, p_bij, u0_bij)
+infprob = InferenceProblem(model, p_init; p_bij, u0_bij)
 
 
 @testset "`InferenceResult``" begin
@@ -48,7 +48,7 @@ infprob = InferenceProblem(model, p_init, p_bij, u0_bij)
                         [1:length(tsteps)],
                         [ode_data])
     p_res = get_p_trained(res)
-    @assert all(p_res[:b] .== p_init[:b])
+    @test all(p_res[:b] .== p_init[:b])
 end
 
 @testset "`InferenceResult`` from `piecewise_ML`" begin

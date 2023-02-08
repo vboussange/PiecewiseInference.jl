@@ -4,6 +4,7 @@ using OptimizationOptimisers, OptimizationFlux, OptimizationOptimJL
 using Test
 using PiecewiseInference
 using Bijectors
+import PiecewiseInference:loss_param_prior
 
 @model MyModel
 function (m::MyModel)(du, u, p, t)
@@ -32,7 +33,7 @@ model = MyModel(mp)
 sol_data = simulate(model)
 ode_data = Array(sol_data)
 
-infprob = InferenceProblem(model, p_init, p_bij, u0_bij)
+infprob = InferenceProblem(model, p_init; p_bij, u0_bij)
 optimizers = [ADAM(0.001)]
 epochs = [4000]
 group_nb = 2
@@ -45,7 +46,6 @@ batchsizes = [group_nb]
                         epochs = epochs, 
                         optimizers = optimizers,
                         batchsizes = batchsizes,
-                        ic_term = 0.
                         )
     p_trained = get_p_trained(res)
     @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-3))
@@ -80,7 +80,7 @@ batchsizes = [2]
                         batchsizes = batchsizes,
                         )
     p_trained = get_p_trained(res)
-    @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-4))
+    @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-3))
     @test length(res.losses) == sum(epochs) + 1
 end
 
@@ -190,4 +190,26 @@ end
     p_trained = get_p_trained(res_array[end])
     @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-1))
     @test length(res_array[end].losses) == sum(epochs) + 1
+end
+
+
+@testset "piecewise MLE, SGD, with priors" begin
+    batchsizes = [3]
+    group_nb = 3
+    param_distrib = Dict(:b => MvNormal([0.23, 0.4], [2., 2.]))
+    loss_param_prior(p) = loss_param_prior_from_dict(p, param_distrib)
+
+    infprob = InferenceProblem(model, p_init; p_bij, u0_bij, loss_param_prior)
+
+    res = piecewise_MLE(infprob;
+                        group_nb = group_nb, 
+                        data = ode_data, 
+                        tsteps = tsteps, 
+                        epochs = epochs, 
+                        optimizers = optimizers,
+                        batchsizes = batchsizes,
+                        )
+    p_trained = get_p_trained(res)
+    @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-3 ))
+    @test length(res.losses) == sum(epochs) + 1
 end

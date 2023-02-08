@@ -1,16 +1,5 @@
 # for more intuition on kwargs : https://discourse.julialang.org/t/passing-kwargs-can-overwrite-other-keyword-arguments/74933
 
-"""
-$(SIGNATURES)
-
-default loss function for `piecewise_MLE`.
-"""
-function _loss_multiple_shoot_init(data, params, pred, rg, ic_term)
-    l =  mean((data - pred).^2)
-    l +=  mean((data[:,1] - pred[:,1]).^2) * ic_term # putting more weights on initial conditions
-    return l
-end
-
 #=
     Need to overwrite the behavior of length(nc::NCcyle)
     because it does not correspond to what we aim at
@@ -34,18 +23,10 @@ Returns a `InferenceResult`.
 - `tsteps` : corresponding to data
 
 # Optional
-- `loss_fn` : the loss function, that takes as arguments `loss_fn(data, params, pred, rg, ic_term)` where 
-    `data` is the training data, `params` is the parameter of the model (for defining priors)
-    pred` corresponds to the predicted state variables, `rg` corresponds
-    to the range of the piecewise wrt the initial data, and `ic_term` is a weight on the initial conditions. 
-    `loss_fn` must transform the pred into the observables, with a function 
-    `h` that maps the state variables to the observables. By default, `h` is taken as the identity.
 - `u0_init` : if not provided, we initialise from `data`
 - `optimizers` : array of optimizers, e.g. `[Adam(0.01)]`
 - `epochs` : number of epochs, which length should match that of `optimizers`
 - `batchsizes`: array of batch size, which length should match that of `optimizers`
-- `continuity_term` : weight on continuity conditions
-- `ic_term` : weight on initial conditions
 - `verbose_loss` : displaying loss
 - `info_per_its` = 50,
 - `plotting` : plotting convergence loss
@@ -53,6 +34,8 @@ Returns a `InferenceResult`.
 - `cb` : call back function.
     Must be of the form `cb(θs, p_trained, losses, pred, ranges)`
 - `threshold` : default to 1e-6
+- `save_pred = true` saves predictions
+- `save_losses = true` saves losses
 
 # Examples
 ```julia
@@ -86,12 +69,18 @@ mp = ModelParams(;p = p_true,
 model = MyModel(mp)
 sol_data = ParametricModels.simulate(model)
 ode_data = Array(sol_data)
+# adding some normally distributed noise
+σ_noise = 0.1
+ode_data_wnoise = ode_data .+ randn(size(ode_data)) .* σ_noise
 # Define the `InferenceProblem`
 # First specifiy which values can the parameter take with bijectors
 # here, `b` is constrained to be ∈ [1e-3, 5e0] and `u0` ∈ [1e-3, 5.]
 p_bij = (bijector(Uniform(1e-3, 5e0)),)
 u0_bij = bijector(Uniform(1e-3,5.))
-infprob = InferenceProblem(model, p_init, p_bij, u0_bij)
+distrib_noise = MvNormal(ones(2) * σ_noise^2)
+# defining `loss_likelihood`
+loss_likelihood(data, pred, rng) = sum(logpdf(distrib_noise, data .- pred))
+infprob = InferenceProblem(model, p_init; p_bij, u0_bij)
 optimizers = [ADAM(0.001)]
 epochs = [5000]
 group_nb = 2
@@ -99,7 +88,7 @@ batchsizes = [1] # batch size used for each optimizer in optimizers (here only o
 # you could also have `batchsizes = [group_nb]`
 res = piecewise_MLE(infprob,
                     group_nb = group_nb, 
-                    data = ode_data, 
+                    data = ode_data_wnoise, 
                     tsteps = tsteps, 
                     epochs = epochs, 
                     optimizers = optimizers,
@@ -131,6 +120,7 @@ function piecewise_ML_indep_TS(infprob;
                                 group_nb = nothing,
                                 tsteps::Vector, #corresponding time steps
                                 save_pred = true, # saving prediction
+                                save_losses = true, # saving prediction
                                 kwargs...)
     @assert length(tsteps) == length(data) "Independent time series must be gathered as a Vector"
     @assert all(size(data[1],1) .== size.(data, 1)) "Independent time series must have same state variable dimension"
@@ -152,8 +142,7 @@ function piecewise_ML_indep_TS(infprob;
                         ranges=ranges_cat,
                         data=data_cat, 
                         tsteps=tsteps_cat, 
-                        kwargs...,
-                        continuity_term = 0.,) 
+                        kwargs...) 
                         # this overrides kwargs, essential as it does not 
                         # make sense to have continuity across indepdenent TS
                         # NOTE: we could have continuity within a time series, 
@@ -171,22 +160,18 @@ function piecewise_ML_indep_TS(infprob;
         # group back the time series in vector, to have
         # pred = [ [mibibatch_1_ts_1, mibibatch_2_ts_1...],  [mibibatch_1_ts_2, mibibatch_2_ts_2...] ...]
         pred_arr = [res.pred[idx_res[i]+1:idx_res[i+1]] for i in 1:length(data)]
-        res_arr = InferenceResult(res.model,
+    else
+        pred_arr = nothing
+    end
+    save_losses ? losses = res.losses : losses = nothing
+
+    res_arr = InferenceResult(infprob,
                             res.minloss,
                             res.p_trained,
                             u0s_trained_arr, 
                             pred_arr, 
                             ranges_arr, 
-                            res.losses,)
-    else
-        res_arr = InferenceResult(res.model,
-                            res.minloss,
-                            res.p_trained,
-                            u0s_trained_arr,
-                            [], 
-                            ranges_arr, 
-                            res.losses,)
-    end
+                            losses,)
     return res_arr
 end
 
@@ -194,18 +179,16 @@ function _piecewise_MLE(infprob;
                         data,
                         tsteps,
                         ranges, # provided by `piecewise_MLE`
-                        loss_fn = _loss_multiple_shoot_init,
                         optimizers = [ADAM(0.01), BFGS(initial_stepnorm=0.01)],
                         epochs = [1000, 200],
                         batchsizes = fill(length(ranges),length(epochs)),
-                        continuity_term = 1.,
-                        ic_term = 1.,
                         verbose_loss = true,
                         plotting = false,
                         info_per_its=50,
                         cb = nothing,
-                        threshold = 1e-16,
+                        threshold = -Inf,
                         save_pred = true,
+                        save_losses = true,
                         u0s_init = nothing,
                         )
     model = get_model(infprob)
@@ -226,17 +209,16 @@ function _piecewise_MLE(infprob;
     # initialise u0s
     u0s_init = _init_u0s(infprob, u0s_init, data, ranges)
     # trainable parameters
-    θ = [u0s_init;p_init]
+    θ = [u0s_init; p_init]
 
     # piecewise loss
     function _loss(θ, idx_rngs)
-        return piecewise_loss(infprob,θ, 
+        return piecewise_loss(infprob,
+                            θ, 
                             data, 
                             tsteps, 
-                            (data, params, pred, rg) -> loss_fn(data, params, pred, rg, ic_term),
                             ranges,
-                            idx_rngs;
-                            continuity_term = continuity_term)
+                            idx_rngs)
     end
     __loss(x, p, idx_rngs=idx_ranges...) = _loss(x, idx_rngs) #used for the "Optimization function"
 
@@ -291,10 +273,10 @@ function _piecewise_MLE(infprob;
         u0 = res.minimizer
     end
     
-    minloss, pred = _loss(res.minimizer, idx_ranges...)
-    p_trained = _get_param(infprob, res.minimizer, nb_group)
+    minloss, pred = _loss(u0, idx_ranges...)
+    p_trained = _get_param(infprob, u0, nb_group)
 
-    u0s_trained = [_get_u0s(infprob, res.minimizer, i, nb_group) for i in 1:nb_group]
+    u0s_trained = [_get_u0s(infprob, u0, i, nb_group) for i in 1:nb_group]
 
     @info "Minimum loss for all batches: $minloss"
     if !isnothing(cb)
@@ -308,23 +290,15 @@ function _piecewise_MLE(infprob;
                         tsteps,)
     end
     
-    if save_pred
-        res = InferenceResult(infprob,
-                        minloss, 
-                        p_trained,
-                        u0s_trained,
-                        pred, 
-                        ranges, 
-                        losses)
-    else
-        res = InferenceResult(infprob,
-                        minloss,
-                        p_trained,
-                        u0s_trained, 
-                        [],
-                        ranges, 
-                        losses,)
-    end
+    save_pred ? nothing : pred = nothing
+    save_losses ? nothing : losses = nothing
+    res = InferenceResult(infprob,
+                            minloss, 
+                            p_trained,
+                            u0s_trained,
+                            pred, 
+                            ranges, 
+                            losses,)
     return res
 end
 
@@ -459,7 +433,7 @@ end
 
 function __solve(opt::OPT, optprob, idx_ranges, batchsizes, epochs, callback) where OPT
     @info "Running optimizer $OPT"
-    train_loader = Flux.Data.DataLoader(idx_ranges; batchsize = batchsizes, shuffle = true, partial=false)
+    train_loader = Flux.DataLoader(idx_ranges; batchsize = batchsizes, shuffle = true, partial=false)
     res = Optimization.solve(optprob,
                             opt, 
                             ncycle(train_loader, epochs),
