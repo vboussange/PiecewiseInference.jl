@@ -37,10 +37,17 @@ function InferenceProblem(model::M,
     @assert eltype(p0) <: AbstractArray "The values of `p` must be arrays"
     @assert length(p_bij) == length(values(p0)) "Each element of `p_dist` should correspond to an entry of `p0`"
     @assert loss_param_prior(p0) isa Number
+
+    # drawing `u0_pred` and `u0_data` in the optimization space,
+    # and projecting it to test `loss_u0_prior`
     u0_pred = randn(get_dims(model)); u0_data = randn(get_dims(model));
-    @assert loss_u0_prior(u0_pred, u0_data) isa Number
-    data = randn(get_dims(model), 10); pred = randn(get_dims(model), 10)
-    @assert loss_likelihood(data, pred, nothing) isa Number
+    @assert loss_u0_prior(inverse(u0_bij)(u0_pred), inverse(u0_bij)(u0_data)) isa Number
+    # TODO: do the same as above for `loss_param_prior` and `loss_likelihood`
+    # drawing `data` and `pred` in the optimization space,
+    # and projecting it to test `loss_u0_prior`
+    # data = randn(get_dims(model), 10); pred = randn(get_dims(model), 10)
+    # ...
+    # @assert loss_likelihood(data, pred, nothing) isa Number
 
     lp = [0;length.(values(p0))...]
     idx_st = [sum(lp[1:i])+1:sum(lp[1:i+1]) for i in 1:length(lp)-1]

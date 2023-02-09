@@ -183,17 +183,17 @@ end
 """
 $SIGNATURES
 
-Prints in a nice format the NamedTuple or Dict `p_trained`.
+Prints in a nice format the NamedTuple or Dict `p_1`.
 If `p_true` provided, also display its values for comparisions.
 """
-function pretty_print(p_trained, p_true = nothing)
-    for k in keys(p_trained)
-        println(k, "_trained = ")
-        display(p_trained[k])
+function pretty_print(p_1, p_2 = nothing)
+    for k in keys(p_1)
+        println(k, "_1 = ")
+        display(p_1[k])
         println("")
-        if !isnothing(p_true)
-            println(k,  "true = ")
-            display(p_true[k])
+        if !isnothing(p_2)
+            println(k,  "_2 = ")
+            display(p_2[k])
         end
         println("*********")
     end
