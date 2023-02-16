@@ -24,6 +24,7 @@ module PiecewiseInference
     using Bijectors
     using SciMLBase
     using ComponentArrays
+    using Zygote
 
     # parametric function
     abstract type ParamFun{N} end

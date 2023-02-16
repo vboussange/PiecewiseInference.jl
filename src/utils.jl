@@ -218,15 +218,12 @@ end
 function to_optim_space(p::ComponentArray, p_bij)
     p̃ = similar(p)[keys(p_bij)]
     for k in keys(p_bij)
-        p̃[k] .= p_bij[k](p[k])
+        p̃[k] = p_bij[k](p[k])
     end
     return p̃
 end
 
 function to_param_space(θ::ComponentArray, p_bij)
-    p = similar(θ)[keys(p_bij)]
-    for k in keys(p)
-        p[k] .= inverse(p_bij[k])(θ[k])
-    end
-    return p
+    pairs = [k => inverse(p_bij[k])(θ[k]) for k in keys(p_bij)]
+    return ComponentArray(NamedTuple(pairs))
 end

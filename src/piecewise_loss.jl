@@ -22,7 +22,6 @@ function piecewise_loss(
                         idx_rngs)
 
     model = get_model(infprob)
-    dim_prob = get_dims(model)
     nb_group = length(ranges)
     loss_likelihood = get_loss_likelihood(infprob)
     loss_u0_prior = get_loss_u0_prior(infprob)
@@ -46,7 +45,11 @@ function piecewise_loss(
         pred = sol |> Array
         loss += loss_likelihood(data, pred, rg) # negative loglikelihood
         loss += loss_u0_prior(data[:,1], u0_i) # negative log u0 priors
-        group_predictions[i] = pred
+
+        # used for plotting, no need to differentiate
+        Zygote.ignore() do
+            group_predictions[i] = pred
+        end
 
     end
     # adding priors

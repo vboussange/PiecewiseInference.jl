@@ -221,14 +221,14 @@ end
     p_init= ComponentArray(b = [1., 2.],)
     
     u0 = ones(2)
-    p_bij = (bijector(Uniform(1e-3, 5e0)),)
+    p_bij = (b = bijector(Uniform(1e-3, 5e0)),)
     u0_bij = bijector(Uniform(1e-3,5.))
     
     mp = ModelParams(; p = p_true, 
                     tspan,
                     u0, 
                     alg = BS3(),
-                    sensealg = ForwardDiffSensitivity(),
+                    # sensealg = Reverse,
                     saveat = tsteps, 
                     )
     model = MyModel(mp)
