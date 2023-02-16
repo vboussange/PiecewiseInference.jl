@@ -36,6 +36,8 @@ Returns a `InferenceResult`.
 - `threshold` : default to 1e-6
 - `save_pred = true` saves predictions
 - `save_losses = true` saves losses
+- `adtype = Optimization.AutoForwardDiff()` : AD type to be used. Can be `Optimization.AutoForwardDiff()` 
+for forward AD, or `Optimization.Autozygote` for backward AD.
 
 # Examples
 ```julia
@@ -190,6 +192,7 @@ function _piecewise_MLE(infprob;
                         save_pred = true,
                         save_losses = true,
                         u0s_init = nothing,
+                        adtype = Optimization.AutoForwardDiff()
                         )
     model = get_model(infprob)
     dim_prob = get_dims(model) #used by loss_nm
@@ -262,7 +265,7 @@ function _piecewise_MLE(infprob;
 
 
     @info "Training started"
-    objectivefun = OptimizationFunction(__loss, Optimization.AutoForwardDiff()) # similar to https://sensitivity.sciml.ai/stable/ode_fitting/stiff_ode_fit/
+    objectivefun = OptimizationFunction(__loss, adtype) # similar to https://sensitivity.sciml.ai/stable/ode_fitting/stiff_ode_fit/
     opt = first(optimizers)
     optprob = Optimization.OptimizationProblem(objectivefun, θ)
     res = __solve(opt, optprob, idx_ranges, batchsizes[1], epochs[1], callback)

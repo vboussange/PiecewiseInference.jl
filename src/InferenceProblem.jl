@@ -1,4 +1,4 @@
-Base.@kwdef struct InferenceProblem{M,P,RE,PP,U0P,LL,PB,UB}
+Base.@kwdef struct InferenceProblem{M <: AbstractModel,P,RE,PP,U0P,LL,PB <: Bijectors.Transform, UB <: Bijectors.Transform}
     m::M
     p0::P
     re::RE
@@ -32,10 +32,10 @@ function InferenceProblem(model::M,
                             u0_bij = identity,
                             loss_param_prior = _default_param_prior,
                             loss_u0_prior = _default_loss_u0_prior,
-                            loss_likelihood = _default_loss_likelihood) where {M <: AbstractModel, T<: NamedTuple}
-    @assert p0 isa NamedTuple
-    @assert eltype(p0) <: AbstractArray "The values of `p` must be arrays"
-    @assert length(p_bij) == length(values(p0)) "Each element of `p_dist` should correspond to an entry of `p0`"
+                            loss_likelihood = _default_loss_likelihood) where {M <: AbstractModel, T <: ComponentArray}
+    # @assert p0 isa NamedTuple
+    # @assert eltype(p0) <: AbstractArray "The values of `p` must be arrays"
+    @assert length(p_bij) == length(keys(p0)) "Each element of `p_dist` should correspond to an entry of `p0`"
     @assert loss_param_prior(p0) isa Number
 
     # drawing `u0_pred` and `u0_data` in the optimization space,
@@ -49,7 +49,7 @@ function InferenceProblem(model::M,
     # ...
     # @assert loss_likelihood(data, pred, nothing) isa Number
 
-    lp = [0;length.(values(p0))...]
+    lp = [0; [length(p0[k]) for k in keys(p0)]...]
     idx_st = [sum(lp[1:i])+1:sum(lp[1:i+1]) for i in 1:length(lp)-1]
     p_bij = Stacked(p_bij,idx_st)
 

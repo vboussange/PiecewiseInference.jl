@@ -21,7 +21,9 @@ module PiecewiseInference
     using ParametricModels
     using Optimisers, Flux
     using IterTools: ncycle 
-    using Bijectors, SciMLBase
+    using Bijectors
+    using SciMLBase
+    using ComponentArrays
 
     # parametric function
     abstract type ParamFun{N} end

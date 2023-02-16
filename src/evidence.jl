@@ -25,7 +25,7 @@ function loglikelihood(data::Matrix, tsteps, ranges, infprob::InferenceProblem, 
     return - ll
 end
 
-function loglikelihood(data::Matrix, tsteps, ranges, infprob::InferenceProblem, p::NamedTuple, u0s::Vector)
+function loglikelihood(data::Matrix, tsteps, ranges, infprob::InferenceProblem, p, u0s::Vector)
     p_flat, _ = destructure(p)
     loglikelihood(data, tsteps, ranges, infprob, p_flat, u0s)
 end

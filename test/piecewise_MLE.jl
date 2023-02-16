@@ -5,6 +5,8 @@ using Test
 using PiecewiseInference
 using Bijectors
 import PiecewiseInference:loss_param_prior
+using Optimization
+using ComponentArrays
 
 @model MyModel
 function (m::MyModel)(du, u, p, t)
@@ -15,8 +17,8 @@ end
 tsteps = 1.:0.5:100.5
 tspan = (tsteps[1], tsteps[end])
 
-p_true = (b = [0.23, 0.5],)
-p_init= (b = [1., 2.],)
+p_true = ComponentArray(b = [0.23, 0.5],)
+p_init= ComponentArray(b = [1., 2.],)
 
 u0 = ones(2)
 p_bij = (bijector(Uniform(1e-3, 5e0)),)
@@ -213,3 +215,54 @@ end
     @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-3 ))
     @test length(res.losses) == sum(epochs) + 1
 end
+
+@testset "piecewise MLE, SGD, with priors, adtype = AutoZygote()" begin
+    p_true = ComponentArray(b = [0.23, 0.5],)
+    p_init= ComponentArray(b = [1., 2.],)
+    
+    u0 = ones(2)
+    p_bij = (bijector(Uniform(1e-3, 5e0)),)
+    u0_bij = bijector(Uniform(1e-3,5.))
+    
+    mp = ModelParams(; p = p_true, 
+                    tspan,
+                    u0, 
+                    alg = BS3(),
+                    sensealg = ForwardDiffSensitivity(),
+                    saveat = tsteps, 
+                    )
+    model = MyModel(mp)
+    sol_data = simulate(model)
+    ode_data = Array(sol_data)
+    
+    infprob = InferenceProblem(model, p_init; p_bij, u0_bij)
+    optimizers = [ADAM(0.001)]
+    epochs = [4000]
+    group_nb = 2
+    batchsizes = [group_nb]
+
+    param_distrib = Dict(:b => MvNormal([0.23, 0.4], [2., 2.]))
+    loss_param_prior(p) = loss_param_prior_from_dict(p, param_distrib)
+
+    infprob = InferenceProblem(model, p_init; p_bij, u0_bij, loss_param_prior)
+
+    res = piecewise_MLE(infprob;
+                        group_nb = group_nb, 
+                        data = ode_data, 
+                        tsteps = tsteps, 
+                        epochs = epochs, 
+                        optimizers = optimizers,
+                        batchsizes = batchsizes,
+                        adtype = Optimization.AutoZygote()
+                        )
+    p_trained = get_p_trained(res)
+    @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-3 ))
+    @test length(res.losses) == sum(epochs) + 1
+end
+
+# testing stacked bijectors with componentarrays
+p_true = ComponentArray(b = [0.23, 0.5],)
+lp_1 = [0; [length(p_true[k]) for k in keys(p_true)]...]
+p_true = (b = [0.23, 0.5],)
+lp_2 = [0;length.(values(p_true))...]
+lp_2 == lp_1

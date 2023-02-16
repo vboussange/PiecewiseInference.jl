@@ -5,6 +5,7 @@ version = "0.8.1"
 
 [deps]
 Bijectors = "76274a88-744f-5084-9051-94815aaf08c4"
+ComponentArrays = "b0b7db55-cfe3-40fc-9ded-d10e2dbeff66"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
