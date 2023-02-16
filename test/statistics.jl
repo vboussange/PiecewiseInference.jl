@@ -42,10 +42,9 @@ infprob = InferenceProblem(model, p_init; p_bij, u0_bij)
     @test isapprox(σ_estim(L_mb, size(odedata)...), σ^2, atol = 5e-2)
 
     # test loglikelihood from InferenceResult
-    p_trained, _ = destructure(p_true)
     res = InferenceResult(infprob, 
                         Inf,
-                        p_trained, 
+                        p_true, 
                         [u0],
                         [true_data], 
                         [1:length(tsteps)],
@@ -66,10 +65,9 @@ end
     @test isapprox(σ_estim(L_mb, size(odedata)..., true_data), σ^2, atol = 5e-2)
 
     # test loglikelihood from InferenceResult
-    p_trained, _ = destructure(p_true)
     res = InferenceResult(infprob, 
                         Inf,
-                        p_trained, 
+                        p_true, 
                         [u0],
                         [true_data],
                         [1:length(tsteps)],
@@ -95,10 +93,9 @@ end
     σ = 0.8
     odedata = true_data + σ * randn(size(true_data)...)
     # test loglikelihood from InferenceResult
-    p_trained, _ = destructure(p_true)
     res = InferenceResult(infprob, 
                         Inf,
-                        p_trained, 
+                        p_true, 
                         [u0],
                         [true_data],
                         [1:length(tsteps)],

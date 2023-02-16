@@ -66,8 +66,7 @@ end
 loss_likelihood(data, pred, rng) = loss_fn_lognormal_distrib(data, pred, MvNormal(σ_noise^2 * ones(2)))
 infprob = InferenceProblem(model, p_init; p_bij, u0_bij, loss_likelihood)
 
-p_true_flat, _ = destructure(p_true)
 u0s = [ode_data[:, first(rg)] for rg in ranges]
 
-@test loglikelihood(ode_data_w_noise, tsteps, ranges, infprob, p_true_flat, u0s) isa Number
+@test loglikelihood(ode_data_w_noise, tsteps, ranges, infprob, p_true, u0s) isa Number
 @test get_evidence(ode_data_w_noise, tsteps, ranges, infprob, p_true, u0s) isa Number

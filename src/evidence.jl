@@ -26,8 +26,7 @@ function loglikelihood(data::Matrix, tsteps, ranges, infprob::InferenceProblem, 
 end
 
 function loglikelihood(data::Matrix, tsteps, ranges, infprob::InferenceProblem, p, u0s::Vector)
-    p_flat, _ = destructure(p)
-    loglikelihood(data, tsteps, ranges, infprob, p_flat, u0s)
+    loglikelihood(data, tsteps, ranges, infprob, p, u0s)
 end
 
 """
@@ -43,9 +42,8 @@ For now, we do not integrate over initial conditions `u0s`, but this may be cons
 """
 function get_evidence(data::Matrix, tsteps, ranges, infprob::InferenceProblem, p::NamedTuple, u0s::Vector)
     # To be completed
-    p_flat, _ = destructure(p)
     ll(p) = loglikelihood(data, tsteps, ranges, infprob, p, u0s)
     A = - ForwardDiff.hessian(ll, p_flat)
-    ll_map = loglikelihood(data, tsteps, ranges, infprob, p_flat, u0s)
+    ll_map = loglikelihood(data, tsteps, ranges, infprob, p, u0s)
     return ll_map - log(det(A / (2π)))
 end

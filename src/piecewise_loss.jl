@@ -28,9 +28,7 @@ function piecewise_loss(
     loss_u0_prior = get_loss_u0_prior(infprob)
     loss_param_prior = get_loss_param_prior(infprob)
 
-    @assert length(θ) > nb_group * dim_prob "`params` should contain [u0;p]"
-
-    params = _get_param(infprob, θ, nb_group) # params of the problem
+    params = to_param_space(θ, infprob.p_bij)
 
     # Calculate multiple shooting loss
     loss = zero(eltype(θ))
@@ -57,22 +55,11 @@ function piecewise_loss(
     return loss, group_predictions
 end
 
-# projecting θ in optimization space to param in Tuple form in true parameter space
-function _get_param(infprob::InferenceProblem, θ, nb_group)
-    dim_prob = get_dims(infprob)
-    p̃ = @view θ[nb_group*dim_prob+1:end]
-    # projecting p in true parameter space
-    p = inverse(get_p_bijector(infprob))(p̃) 
-    # converting to named tuple, for easy handling
-    p_tuple = get_re(infprob)(p)
-    return p_tuple
-end
-
 # projecting θ in optimization space to u0 for segment i in true parameter space
 function _get_u0s(infprob::InferenceProblem, θ, i, nb_group)
     dim_prob = get_dims(infprob)
     @assert 0 < i <= nb_group "trying to access undefined segment"
-    ũ0 = @view θ[dim_prob*(i-1)+1:dim_prob*i]
+    ũ0 = θ.u0s[dim_prob*(i-1)+1:dim_prob*i]
     # projecting in true parameter space
     u0 = inverse(get_u0_bijector(infprob))(ũ0)
     return u0

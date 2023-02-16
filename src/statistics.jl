@@ -84,7 +84,6 @@ function loglikelihood(res::InferenceResult,
                         noisedistrib;
                         u0s = res.u0s_trained,
                         p = res.p_trained) # we take res.p_trained because we would have to transform the parameters otherwise
-    p, _ = Optimisers.destructure(p)
     p = p |> res.model.mp.st
     θ = [u0s...;p] 
     loss_fn(data, params, pred, rg) = PiecewiseInference.loglikelihood(pred, data, noisedistrib)

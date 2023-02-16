@@ -21,7 +21,7 @@ p_true = ComponentArray(b = [0.23, 0.5],)
 p_init= ComponentArray(b = [1., 2.],)
 
 u0 = ones(2)
-p_bij = (bijector(Uniform(1e-3, 5e0)),)
+p_bij = (b = bijector(Uniform(1e-3, 5e0)),)
 u0_bij = bijector(Uniform(1e-3,5.))
 
 mp = ModelParams(; p = p_true, 
@@ -262,6 +262,8 @@ end
 
 # testing stacked bijectors with componentarrays
 p_true = ComponentArray(b = [0.23, 0.5],)
+pflat, re = destructure(p_true)
+p_true_re = re(pflat)
 lp_1 = [0; [length(p_true[k]) for k in keys(p_true)]...]
 p_true = (b = [0.23, 0.5],)
 lp_2 = [0;length.(values(p_true))...]

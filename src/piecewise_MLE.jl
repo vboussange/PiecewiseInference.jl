@@ -212,7 +212,7 @@ function _piecewise_MLE(infprob;
     # initialise u0s
     u0s_init = _init_u0s(infprob, u0s_init, data, ranges)
     # trainable parameters
-    θ = [u0s_init; p_init]
+    θ = ComponentArray(p_init; u0s = u0s_init)
 
     # piecewise loss
     function _loss(θ, idx_rngs)
@@ -231,7 +231,7 @@ function _piecewise_MLE(infprob;
     # Here we need a default behavior for Optimization.jl (see https://github.com/SciML/Optimization.jl/blob/c0a51120c7c54a89d091b599df30eb40c4c0952b/lib/OptimizationFlux/src/OptimizationFlux.jl#L53)
     callback(θ, l, pred=[]) = begin
         push!(losses, l)
-        p_trained = _get_param(infprob, θ, nb_group)
+        p_trained = to_param_space(θ, infprob.p_bij)
 
         if length(losses)%info_per_its==0
             verbose_loss ? println("Current loss after $(length(losses)) iterations: $(losses[end])") : nothing
@@ -260,9 +260,6 @@ function _piecewise_MLE(infprob;
     ################
     # Container to track the losses
     losses = Float64[]
-    # Container to track the parameter evolutions
-    θs = Float64[]
-
 
     @info "Training started"
     objectivefun = OptimizationFunction(__loss, adtype) # similar to https://sensitivity.sciml.ai/stable/ode_fitting/stiff_ode_fit/
@@ -277,7 +274,7 @@ function _piecewise_MLE(infprob;
     end
     
     minloss, pred = _loss(u0, idx_ranges...)
-    p_trained = _get_param(infprob, u0, nb_group)
+    p_trained = to_param_space(u0, infprob.p_bij)
 
     u0s_trained = [_get_u0s(infprob, u0, i, nb_group) for i in 1:nb_group]
 
@@ -362,7 +359,7 @@ function iterative_piecewise_MLE(infprob;group_sizes = nothing,
     # initialising results
     data = kwargs[:data]
     datasize = size(data,2)
-    p_trained, _ = destructure(get_p(infprob))
+    p_trained = get_p(infprob)
     res = InferenceResult(infprob,
                         Inf,
                         p_trained,
