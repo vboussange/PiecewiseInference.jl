@@ -11,7 +11,7 @@ using Distributions
     include("InferenceResult.jl")
     include("piecewise_loss.jl")
     include("piecewise_MLE.jl")
-    include("statistics.jl")
+    # include("statistics.jl")
     include("evidence.jl")
 end
 

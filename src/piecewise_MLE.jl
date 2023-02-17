@@ -207,12 +207,12 @@ function _piecewise_MLE(infprob;
         end
     end
 
-    # initialise p_init
-    p_init = get_p(infprob)
-    # initialise u0s
-    u0s_init = _init_u0s(infprob, u0s_init, data, ranges)
-    # trainable parameters
-    θ = ComponentArray(p_init; u0s = u0s_init)
+    # initialising with data if not provided
+    if isnothing(u0s_init) 
+        u0s_init = _init_u0s(data, ranges)
+    end
+    # build θ, which is the parameter vector containing u0s, in the parameter space
+    θ = _build_θ(get_p(infprob), get_p_bijector(infprob), u0s_init, get_u0_bijector(infprob))
 
     # piecewise loss
     function _loss(θ, idx_rngs)
@@ -441,16 +441,21 @@ function __solve(opt::OPT, optprob, idx_ranges, batchsizes, epochs, callback) wh
     return res
 end
 
-"""
-    $SIGNATURES
-`u0s_init` should come as a vector of u0, i.e. a vector of vector.
-We ouput it as a vector of scalar, after tranformation in the optimization space.
-"""
-function _init_u0s(infprob, u0s_init, data, ranges)
-     # initialising with data if not provided
-     if isnothing(u0s_init) 
-        u0s_init = [data[:,first(rg)] for rg in ranges]
-    end
-    u0s_init = [get_u0_bijector(infprob)(u0) for u0 in u0s_init] # projecting u0s_init in optimization space
+function _init_u0s(data, ranges)
+    u0s_init = [data[:,first(rg)] for rg in ranges]
+    return u0s_init
+end
+
+function _u0_to_optim_space(u0s_init, u0_bij)
+    u0s_init = [u0_bij(u0) for u0 in u0s_init] # projecting u0s_init in optimization space
     return vcat(u0s_init...)
+end
+
+function _build_θ(p_init, p_bij, u0s_init, u0_bij)
+    # initialise p_init
+    p̃ = to_optim_space(p_init, p_bij)
+    ũ0s = _u0_to_optim_space(u0s_init, u0_bij)
+    # initialise u0s
+    # trainable parameters
+    θ = ComponentArray(p̃; u0s = ũ0s)
 end

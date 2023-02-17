@@ -209,7 +209,7 @@ Returns the loglikelihood of `params` given the prior distribution of the parame
 function loss_param_prior_from_dict(params, param_distrib)
     l = 0.
     # parameter prior
-    for k in keys(params)
+    for k in keys(param_distrib)
         l += logpdf(param_distrib[k], reshape(params[k],:))
     end
     return - l
@@ -223,7 +223,9 @@ function to_optim_space(p::ComponentArray, p_bij)
     return p̃
 end
 
+# TODO /!\ order is not guaranteed!
 function to_param_space(θ::ComponentArray, p_bij)
-    pairs = [k => inverse(p_bij[k])(θ[k]) for k in keys(p_bij)]
-    return ComponentArray(NamedTuple(pairs))
+    pairs = [inverse(p_bij[k])(θ[k]) for k in keys(p_bij)]
+    ax = getaxes(θ)
+    return ComponentArray(vcat(pairs...), ax)
 end

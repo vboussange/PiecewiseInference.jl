@@ -259,12 +259,3 @@ end
     @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-3 ))
     @test length(res.losses) == sum(epochs) + 1
 end
-
-# testing stacked bijectors with componentarrays
-p_true = ComponentArray(b = [0.23, 0.5],)
-pflat, re = destructure(p_true)
-p_true_re = re(pflat)
-lp_1 = [0; [length(p_true[k]) for k in keys(p_true)]...]
-p_true = (b = [0.23, 0.5],)
-lp_2 = [0;length.(values(p_true))...]
-lp_2 == lp_1

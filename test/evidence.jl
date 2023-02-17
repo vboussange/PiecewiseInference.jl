@@ -6,8 +6,10 @@ using PiecewiseInference
 using Distributions
 using Bijectors
 using ForwardDiff
+using ComponentArrays
 
 σ_noise = 0.1
+group_size = 10
 
 @model MyModel
 function (m::MyModel)(du, u, p, t)
@@ -18,10 +20,10 @@ end
 tsteps = 1.:1.:100.5
 tspan = (tsteps[1], tsteps[end])
 
-p_true = (b = [0.23, 0.5],)
-p_init= (b = [1., 2.],)
+p_true = ComponentArray(b = [0.23, 0.5],)
+p_init= ComponentArray(b = [1., 2.],)
 
-p_bij = (bijector(Uniform(0.,3.)),)
+p_bij = (b= bijector(Uniform(0.,3.)),)
 u0_bij = bijector(Uniform(0.,5.))
 
 u0 = ones(2)
@@ -37,7 +39,7 @@ sol_data = simulate(model)
 ode_data = Array(sol_data)
 ode_data_w_noise = ode_data .* exp.(σ_noise .* randn(size(ode_data)))
 
-ranges = get_ranges(;datasize = length(tsteps), group_size = 10)
+ranges = get_ranges(;datasize = length(tsteps), group_size )
 
 function loss_fn_lognormal_distrib(data, pred, noise_distrib)
     if any(pred .<= 0.) # we do not tolerate non-positive ICs -
@@ -68,5 +70,5 @@ infprob = InferenceProblem(model, p_init; p_bij, u0_bij, loss_likelihood)
 
 u0s = [ode_data[:, first(rg)] for rg in ranges]
 
-@test loglikelihood(ode_data_w_noise, tsteps, ranges, infprob, p_true, u0s) isa Number
-@test get_evidence(ode_data_w_noise, tsteps, ranges, infprob, p_true, u0s) isa Number
+@test loglikelihood(ode_data_w_noise, tsteps, infprob, p_true, u0s; group_size) isa Number
+@test get_evidence(ode_data_w_noise, tsteps, infprob, p_true, u0s; group_size) isa Number

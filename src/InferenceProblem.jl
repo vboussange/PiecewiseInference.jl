@@ -26,14 +26,13 @@ which should have as arguments `data, pred, rng`. By default, it corresponds to 
 """
 function InferenceProblem(model::M, 
                             p0::T;
-                            p_bij = nothing,
+                            p_bij::P = nothing,
                             u0_bij = identity,
                             loss_param_prior = _default_param_prior,
                             loss_u0_prior = _default_loss_u0_prior,
-                            loss_likelihood = _default_loss_likelihood) where {M <: AbstractModel, T <: ComponentArray}
+                            loss_likelihood = _default_loss_likelihood) where {M <: AbstractModel, T <: ComponentArray, P <: Union{Nothing, NamedTuple}}
     # @assert p0 isa NamedTuple
     # @assert eltype(p0) <: AbstractArray "The values of `p` must be arrays"
-    @assert length(p_bij) == length(keys(p0)) "Each element of `p_dist` should correspond to an entry of `p0`"
     @assert loss_param_prior(p0) isa Number
 
     # drawing `u0_pred` and `u0_data` in the optimization space,
@@ -47,17 +46,14 @@ function InferenceProblem(model::M,
     # ...
     # @assert loss_likelihood(data, pred, nothing) isa Number
     if isnothing(p_bij)
-        p_bij = Dict{:Symbol,Bijectors.Transform}()
-        all_params = vcat(keys(p)...,:u0)
-        for k in all_params
-            p_bij[k] = identity
-        end
+        p_bij = Dict([keys(p0) .=> identity]...)
+        p_bij = NamedTuple(p_bij)
     end
 
-    p̃ = to_optim_space(p0, p_bij)
+    @assert length(p_bij) == length(keys(p0)) "Each element of `p_dist` should correspond to an entry of `p0`"
 
     InferenceProblem(model,
-                    p̃,
+                    p0,
                     loss_param_prior,
                     loss_u0_prior, 
                     loss_likelihood,

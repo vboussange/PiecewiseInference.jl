@@ -15,10 +15,10 @@ end
 tsteps = 1.:0.5:100.5
 tspan = (tsteps[1], tsteps[end])
 
-p_true = (b = [0.23, 0.5],)
-p_init= (b = [1., 2.],)
+p_true = ComponentArray(b = [0.23, 0.5],)
+p_init= ComponentArray(b = [1., 2.],)
 
-p_bij = (bijector(Uniform(0.,3.)),)
+p_bij = (b = bijector(Uniform(0.,3.)),)
 # u0_bij = bijector(Uniform(0.,5.))
 u0_bij = bijector(Uniform(0.,5.))
 

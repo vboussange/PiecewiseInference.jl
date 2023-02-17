@@ -26,71 +26,71 @@ function RSS(res::InferenceResult, data_set::Array, noisedistrib::T) where T <: 
     return rss
 end
 
-"""
-$(SIGNATURES)
+# """
+# $(SIGNATURES)
 
-    Computes the loglikelihood of `res` given the observational noise variance distribution `noisedistrib`.
+#     Computes the loglikelihood of `res` given the observational noise variance distribution `noisedistrib`.
 
-# Args
-- `noisedistrib` corresponds to the assumed distribution of the noise. 
-It can be `:MvLogNormal` or `:MvNormal` (comprising the multivariate types)
-"""
-function loglikelihood(res::InferenceResult, data_set::Array, noisedistrib::Sampleable)
-    isempty(res.pred) ? error("`res.pred` should not be empty, use `piecewise_MLE` with `save_pred = true`") : nothing
-    return loglikelihood(res.pred, res.ranges, data_set, noisedistrib)
-end
+# # Args
+# - `noisedistrib` corresponds to the assumed distribution of the noise. 
+# It can be `:MvLogNormal` or `:MvNormal` (comprising the multivariate types)
+# """
+# function loglikelihood(res::InferenceResult, data_set::Array, noisedistrib::Sampleable)
+#     isempty(res.pred) ? error("`res.pred` should not be empty, use `piecewise_MLE` with `save_pred = true`") : nothing
+#     return loglikelihood(res.pred, res.ranges, data_set, noisedistrib)
+# end
 
-#specialised version for piecewise
-function loglikelihood(pred::Vector, ranges::Vector, data_set::Array, noisedistrib) 
-    if typeof(pred) <: Vector{Vector{Array{T}}} where T # for independent time series
-        error("Function to yet implemented from `InferenceResult` with Independent time series")
-    else
-        pred_all_batches = cat( [pred[i] for (i,rng) in enumerate(ranges)]..., dims=2)
-        data_all_batches = cat( [data_set[:,rng] for (i,rng) in enumerate(ranges)]..., dims=2)
-        logl = loglikelihood(pred_all_batches, data_all_batches, noisedistrib)
-    end
-    return logl
-end
-# see https://juliaeconomics.com/2014/06/16/numerical-maximum-likelihood-the-ols-example/
+# #specialised version for piecewise
+# function loglikelihood(pred::Vector, ranges::Vector, data_set::Array, noisedistrib) 
+#     if typeof(pred) <: Vector{Vector{Array{T}}} where T # for independent time series
+#         error("Function to yet implemented from `InferenceResult` with Independent time series")
+#     else
+#         pred_all_batches = cat( [pred[i] for (i,rng) in enumerate(ranges)]..., dims=2)
+#         data_all_batches = cat( [data_set[:,rng] for (i,rng) in enumerate(ranges)]..., dims=2)
+#         logl = loglikelihood(pred_all_batches, data_all_batches, noisedistrib)
+#     end
+#     return logl
+# end
+# # see https://juliaeconomics.com/2014/06/16/numerical-maximum-likelihood-the-ols-example/
 
 
-function loglikelihood(pred_all_batches::Array, data_all_batches::Array, noisedistrib::MvNormal)
-    @assert all(noisedistrib.μ .== 0.) "`noisedistrib` must have 0 mean, because the mean error should be zero"
-    l = 0.
-    for i in 1:size(pred_all_batches,2)
-        ϵ = pred_all_batches[:,i] - data_all_batches[:,i]
-        l += logpdf(noisedistrib, ϵ)
-    end
-    return l
-end
+# function loglikelihood(pred_all_batches::Array, data_all_batches::Array, noisedistrib::MvNormal)
+#     @assert all(noisedistrib.μ .== 0.) "`noisedistrib` must have 0 mean, because the mean error should be zero"
+#     l = 0.
+#     for i in 1:size(pred_all_batches,2)
+#         ϵ = pred_all_batches[:,i] - data_all_batches[:,i]
+#         l += logpdf(noisedistrib, ϵ)
+#     end
+#     return l
+# end
 
-get_μ(dist::MvLogNormal) = dist.normal.μ
+# get_μ(dist::MvLogNormal) = dist.normal.μ
 
-function loglikelihood(pred_all_batches::Array, data_all_batches::Array, noisedistrib::MvLogNormal)
-    l = 0.
-    @assert all(get_μ(noisedistrib) .== 0.) "`noisedistrib` must have 0 mean, because the mean error should be zero"
-    for i in 1:size(pred_all_batches,2)
-        if all(pred_all_batches[:,i] .> 0.) && all(data_all_batches[:,i] .> 0.)
-            ϵ = log.(pred_all_batches[:,i]) - log.(data_all_batches[:,i])
-            l += logpdf(noisedistrib.normal, ϵ) # see Schartau 2017 (https://bg.copernicus.org/articles/14/1647/2017/) Eq. 14.
-        end
-    end
-    return l - sum(log.(pred_all_batches))
-    # NOTE: pdf(MvNormal(zeros(2), σ^2 * diagm(ones(2))), [0.,0.]) ≈ pdf(MvNormal(0.,σ),0.)^2
-end
+# function loglikelihood(pred_all_batches::Array, data_all_batches::Array, noisedistrib::MvLogNormal)
+#     l = 0.
+#     @assert all(get_μ(noisedistrib) .== 0.) "`noisedistrib` must have 0 mean, because the mean error should be zero"
+#     for i in 1:size(pred_all_batches,2)
+#         if all(pred_all_batches[:,i] .> 0.) && all(data_all_batches[:,i] .> 0.)
+#             ϵ = log.(pred_all_batches[:,i]) - log.(data_all_batches[:,i])
+#             l += logpdf(noisedistrib.normal, ϵ) # see Schartau 2017 (https://bg.copernicus.org/articles/14/1647/2017/) Eq. 14.
+#         end
+#     end
+#     return l - sum(log.(pred_all_batches))
+#     # NOTE: pdf(MvNormal(zeros(2), σ^2 * diagm(ones(2))), [0.,0.]) ≈ pdf(MvNormal(0.,σ),0.)^2
+# end
 
-function loglikelihood(res::InferenceResult, 
-                        ode_data::Array, 
-                        noisedistrib;
-                        u0s = res.u0s_trained,
-                        p = res.p_trained) # we take res.p_trained because we would have to transform the parameters otherwise
-    p = p |> res.model.mp.st
-    θ = [u0s...;p] 
-    loss_fn(data, params, pred, rg) = PiecewiseInference.loglikelihood(pred, data, noisedistrib)
-    idx_rngs = 1:length(res.ranges)
-    l, _ = piecewise_loss(θ, ode_data, get_kwargs(res.model)[:saveat], res.model, loss_fn, res.ranges, idx_rngs; continuity_term=0.)
-    return l
-end
+# function loglikelihood(res::InferenceResult, 
+#                         ode_data::Array, 
+#                         noisedistrib;
+#                         u0s = res.u0s_trained,
+#                         p = res.p_trained) # we take res.p_trained because we would have to transform the parameters otherwise
+#     p = p |> res.model.mp.st
+#     θ = [u0s...;p] 
+#     loss_fn(data, params, pred, rg) = PiecewiseInference.loglikelihood(pred, data, noisedistrib)
+#     idx_rngs = 1:length(res.ranges)
+#     l, _ = piecewise_loss(θ, ode_data, get_kwargs(res.model)[:saveat], res.model, loss_fn, res.ranges, idx_rngs; continuity_term=0.)
+#     return l
+# end
 
 """
 $(SIGNATURES)
@@ -145,18 +145,18 @@ function estimate_σ(reseco::InferenceResult, odedata::Array; noisedistrib=MvLog
 end
 
 
-# TODO: test it !
-"""
-$(SIGNATURES)
+# # TODO: test it !
+# """
+# $(SIGNATURES)
 
-"""
-function get_var_covar_matrix(reseco::InferenceResult, odedata::Array, noisedistrib::Sampleable)
-    likelihood_fn_optim(p) = Econobio.loglikelihood(reseco, odedata, noisedistrib; p = p)
-    p_trained = reseco.res.p_trained
-    numerical_hessian = ForwardDiff.hessian(likelihood_fn_optim, p_trained)
-    var_cov_matrix = - inv(numerical_hessian)
-    return var_cov_matrix
-end
+# """
+# function get_var_covar_matrix(reseco::InferenceResult, odedata::Array, noisedistrib::Sampleable)
+#     likelihood_fn_optim(p) = loglikelihood(reseco, odedata, noisedistrib; p = p)
+#     p_trained = reseco.res.p_trained
+#     numerical_hessian = ForwardDiff.hessian(likelihood_fn_optim, p_trained)
+#     var_cov_matrix = - inv(numerical_hessian)
+#     return var_cov_matrix
+# end
 
 """
 $(SIGNATURES)

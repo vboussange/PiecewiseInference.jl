@@ -17,8 +17,8 @@ tspan = (tsteps[1], tsteps[end])
 datasize = length(tsteps)
 ranges = [1:101, 101:datasize]
 
-p_true = (r = [0.5, 1.], b = [0.23, 0.5],)
-p_init= (r = [0.7, 1.2], b = [0.2, 0.2],)
+p_true = ComponentArray(r = [0.5, 1.], b = [0.23, 0.5],)
+p_init = ComponentArray(r = [0.7, 1.2], b = [0.2, 0.2],)
 
 u0 = ones(2)
 mp = ModelParams(;p = p_true, 
@@ -36,7 +36,11 @@ ode_data = Array(sol_data)
 # figure()
 # plot(tsteps, sol_data')
 # gcf()
-θ = [ode_data[:,first.(ranges),:][:];p_init[:r];p_init[:b]]
+u0_bij = identity
+p_bij = (r = identity, b = identity)
+u0s_init = ode_data[:,first.(ranges),:][:]
+θ = PiecewiseInference._build_θ(p_init, p_bij, u0s_init, u0_bij)
+
 infprob = InferenceProblem(model, p_init)
  
 @testset "Testing correct behavior `piecewise_loss`" begin
