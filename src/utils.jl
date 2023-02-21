@@ -224,8 +224,9 @@ function to_optim_space(p::ComponentArray, p_bij)
 end
 
 # TODO /!\ order is not guaranteed!
-function to_param_space(θ::ComponentArray, p_bij)
-    pairs = [inverse(p_bij[k])(θ[k]) for k in keys(p_bij)]
-    ax = getaxes(θ)
+function to_param_space(θ::ComponentArray, infprob::InferenceProblem)
+    @unpack p0, p_bij = infprob
+    pairs = [inverse(p_bij[k])(θ[k]) for k in keys(p0)]
+    ax = getaxes(p0)
     return ComponentArray(vcat(pairs...), ax)
 end

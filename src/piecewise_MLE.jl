@@ -231,7 +231,7 @@ function _piecewise_MLE(infprob;
     # Here we need a default behavior for Optimization.jl (see https://github.com/SciML/Optimization.jl/blob/c0a51120c7c54a89d091b599df30eb40c4c0952b/lib/OptimizationFlux/src/OptimizationFlux.jl#L53)
     callback(θ, l, pred=[]) = begin
         push!(losses, l)
-        p_trained = to_param_space(θ, infprob.p_bij)
+        p_trained = to_param_space(θ, infprob)
 
         if length(losses)%info_per_its==0
             verbose_loss ? println("Current loss after $(length(losses)) iterations: $(losses[end])") : nothing
@@ -274,7 +274,7 @@ function _piecewise_MLE(infprob;
     end
     
     minloss, pred = _loss(u0, idx_ranges...)
-    p_trained = to_param_space(u0, infprob.p_bij)
+    p_trained = to_param_space(u0, infprob)
 
     u0s_trained = [_get_u0s(infprob, u0, i, nb_group) for i in 1:nb_group]
 
@@ -457,5 +457,5 @@ function _build_θ(p_init, p_bij, u0s_init, u0_bij)
     ũ0s = _u0_to_optim_space(u0s_init, u0_bij)
     # initialise u0s
     # trainable parameters
-    θ = ComponentArray(p̃; u0s = ũ0s)
+    ComponentArray(p̃; u0s = ũ0s)
 end

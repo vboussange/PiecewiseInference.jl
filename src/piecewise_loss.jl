@@ -27,7 +27,7 @@ function piecewise_loss(
     loss_u0_prior = get_loss_u0_prior(infprob)
     loss_param_prior = get_loss_param_prior(infprob)
 
-    params = to_param_space(θ, infprob.p_bij)
+    params = to_param_space(θ, infprob)
 
     # Calculate multiple shooting loss
     loss = zero(eltype(θ))
