@@ -212,7 +212,7 @@ function _piecewise_MLE(infprob;
         u0s_init = _init_u0s(data, ranges)
     end
     # build θ, which is the parameter vector containing u0s, in the parameter space
-    θ = _build_θ(get_p(infprob), get_p_bijector(infprob), u0s_init, get_u0_bijector(infprob))
+    θ = _build_θ(get_p(infprob), u0s_init, infprob)
 
     # piecewise loss
     function _loss(θ, idx_rngs)
@@ -451,9 +451,10 @@ function _u0_to_optim_space(u0s_init, u0_bij)
     return vcat(u0s_init...)
 end
 
-function _build_θ(p_init, p_bij, u0s_init, u0_bij)
+function _build_θ(p_init, u0s_init, infprob)
     # initialise p_init
-    p̃ = to_optim_space(p_init, p_bij)
+    @unpack u0_bij = infprob
+    p̃ = to_optim_space(p_init, infprob)
     ũ0s = _u0_to_optim_space(u0s_init, u0_bij)
     # initialise u0s
     # trainable parameters

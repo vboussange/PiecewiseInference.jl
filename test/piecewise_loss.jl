@@ -39,9 +39,9 @@ ode_data = Array(sol_data)
 u0_bij = identity
 p_bij = (r = identity, b = identity)
 u0s_init = ode_data[:,first.(ranges),:][:]
-θ = PiecewiseInference._build_θ(p_init, p_bij, u0s_init, u0_bij)
-
 infprob = InferenceProblem(model, p_init)
+θ = PiecewiseInference._build_θ(p_init, u0s_init, infprob)
+
  
 @testset "Testing correct behavior `piecewise_loss`" begin
     l, pred = piecewise_loss(infprob,

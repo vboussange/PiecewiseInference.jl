@@ -9,7 +9,7 @@ function loglikelihood(data::Matrix, tsteps, infprob::InferenceProblem, p::Compo
     # to further use `piecewise_loss`
     datasize = size(data,2)
     ranges = get_ranges(; datasize, kwargs...)
-    θ = _build_θ(p, get_p_bijector(infprob), u0s, get_u0_bijector(infprob))
+    θ = _build_θ(p, infprob, u0s, get_u0_bijector(infprob))
 
     idx_rngs = 1:length(ranges)
 
