@@ -40,7 +40,12 @@ function piecewise_loss(
         tspan = (tsteps[first(rg)], tsteps[last(rg)])
         sol = simulate(model; u0 = u0_i, tspan = tspan, p = params, saveat = tsteps[rg])
         # Abort and return infinite loss if one of the integrations failed
-        sol.retcode == :Success && sol.retcode !== :Terminated ? nothing : return Inf, group_predictions
+        if !(SciMLBase.successful_retcode(sol.retcode))
+            Zygote.ignore() do
+                @warn "got retcode $(sol.retcode)"
+            end
+            return Inf, group_predictions
+        end
 
         pred = sol |> Array
         loss += loss_likelihood(data, pred, rg) # negative loglikelihood
