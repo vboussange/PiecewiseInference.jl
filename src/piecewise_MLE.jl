@@ -38,6 +38,7 @@ Returns a `InferenceResult`.
 - `save_losses = true` saves losses
 - `adtype = Optimization.AutoForwardDiff()` : AD type to be used. Can be `Optimization.AutoForwardDiff()` 
 for forward AD, or `Optimization.Autozygote` for backward AD.
+- `multi_threading = true`: if `true`, segments in the piecewise loss are computed in parallel.
 
 # Examples
 ```julia
@@ -192,7 +193,8 @@ function _piecewise_MLE(infprob;
                         save_pred = true,
                         save_losses = true,
                         u0s_init = nothing,
-                        adtype = Optimization.AutoForwardDiff()
+                        adtype = Optimization.AutoForwardDiff(),
+                        multi_threading=true
                         )
     model = get_model(infprob)
     dim_prob = get_dims(model) #used by loss_nm
@@ -221,7 +223,8 @@ function _piecewise_MLE(infprob;
                             data, 
                             tsteps, 
                             ranges,
-                            idx_rngs)
+                            idx_rngs,
+                            multi_threading)
     end
     __loss(x, p, idx_rngs=idx_ranges...) = _loss(x, idx_rngs) #used for the "Optimization function"
 

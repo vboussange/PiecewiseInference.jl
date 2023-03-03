@@ -26,6 +26,8 @@ module PiecewiseInference
     using ComponentArrays
     using Zygote
 
+    using LoopVectorization
+
     # parametric function
     abstract type ParamFun{N} end
     import Base.length

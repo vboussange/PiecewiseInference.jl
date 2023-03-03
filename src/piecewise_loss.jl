@@ -19,7 +19,8 @@ function piecewise_loss(
                         ode_data::AbstractArray,
                         tsteps::AbstractArray,
                         ranges::AbstractArray,
-                        idx_rngs)
+                        idx_rngs, 
+                        multi_threading)
 
     model = get_model(infprob)
     nb_group = length(ranges)
@@ -32,31 +33,59 @@ function piecewise_loss(
     # Calculate multiple shooting loss
     loss = zero(eltype(θ))
     group_predictions = Vector{Array{eltype(θ)}}(undef, length(ranges))
-    for i in idx_rngs
 
-        rg = ranges[i]
-        u0_i = _get_u0s(infprob, θ, i, nb_group) # taking absolute value, assuming populations cannot be negative
-        data = ode_data[:, rg]
-        tspan = (tsteps[first(rg)], tsteps[last(rg)])
-        sol = simulate(model; u0 = u0_i, tspan = tspan, p = params, saveat = tsteps[rg])
-        # Abort and return infinite loss if one of the integrations failed
-        if !(SciMLBase.successful_retcode(sol.retcode))
-            Zygote.ignore() do
-                @warn "got retcode $(sol.retcode)"
+    if multi_threading
+        Threads.@threads for i in idx_rngs
+            rg = ranges[i]
+            u0_i = _get_u0s(infprob, θ, i, nb_group) # taking absolute value, assuming populations cannot be negative
+            data = ode_data[:, rg]
+            tspan = (tsteps[first(rg)], tsteps[last(rg)])
+            sol = simulate(model; u0 = u0_i, tspan = tspan, p = params, saveat = tsteps[rg])
+
+            # Abort and return infinite loss if one of the integrations failed
+            if !(SciMLBase.successful_retcode(sol.retcode))
+                Zygote.ignore() do
+                    @warn "got retcode $(sol.retcode)"
+                end
+                return Inf, group_predictions
             end
-            return Inf, group_predictions
+
+            pred = sol |> Array
+            loss += loss_likelihood(data, pred, rg) # negative loglikelihood
+            loss += loss_u0_prior(data[:,1], u0_i) # negative log u0 priors
+
+            # used for plotting, no need to differentiate
+            Zygote.ignore() do
+                group_predictions[i] = pred
+            end
         end
+    else
+        for i in idx_rngs
+            rg = ranges[i]
+            u0_i = _get_u0s(infprob, θ, i, nb_group) # taking absolute value, assuming populations cannot be negative
+            data = ode_data[:, rg]
+            tspan = (tsteps[first(rg)], tsteps[last(rg)])
+            sol = simulate(model; u0 = u0_i, tspan = tspan, p = params, saveat = tsteps[rg])
 
-        pred = sol |> Array
-        loss += loss_likelihood(data, pred, rg) # negative loglikelihood
-        loss += loss_u0_prior(data[:,1], u0_i) # negative log u0 priors
+            # Abort and return infinite loss if one of the integrations failed
+            if !(SciMLBase.successful_retcode(sol.retcode))
+                Zygote.ignore() do
+                    @warn "got retcode $(sol.retcode)"
+                end
+                return Inf, group_predictions
+            end
 
-        # used for plotting, no need to differentiate
-        Zygote.ignore() do
-            group_predictions[i] = pred
+            pred = sol |> Array
+            loss += loss_likelihood(data, pred, rg) # negative loglikelihood
+            loss += loss_u0_prior(data[:,1], u0_i) # negative log u0 priors
+
+            # used for plotting, no need to differentiate
+            Zygote.ignore() do
+                group_predictions[i] = pred
+            end
         end
-
     end
+
     # adding priors
     loss += loss_param_prior(params) # negative log param priors
 

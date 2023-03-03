@@ -5,7 +5,6 @@ using Test
 using PiecewiseInference
 using Bijectors
 import PiecewiseInference:loss_param_prior
-using Optimization
 using ComponentArrays
 
 @model MyModel
