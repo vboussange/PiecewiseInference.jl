@@ -4,6 +4,9 @@
 DocStringExtensions.README
 ```
 
+```@index
+```
+
 ```@autodocs
 Modules = [PiecewiseInference]
 ```
