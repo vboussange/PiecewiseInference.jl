@@ -1,4 +1,5 @@
 using LinearAlgebra, ParametricModels, OrdinaryDiffEq, SciMLSensitivity
+using ComponentArrays
 using UnPack
 using OptimizationOptimisers
 using Test

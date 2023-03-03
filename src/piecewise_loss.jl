@@ -20,7 +20,7 @@ function piecewise_loss(
                         tsteps::AbstractArray,
                         ranges::AbstractArray,
                         idx_rngs, 
-                        multi_threading)
+                        multi_threading=true)
 
     model = get_model(infprob)
     nb_group = length(ranges)

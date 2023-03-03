@@ -37,8 +37,9 @@ Returns a `InferenceResult`.
 - `save_pred = true` saves predictions
 - `save_losses = true` saves losses
 - `adtype = Optimization.AutoForwardDiff()` : AD type to be used. Can be `Optimization.AutoForwardDiff()` 
-for forward AD, or `Optimization.Autozygote` for backward AD.
+for forward AD, or `Optimization.Autozygote()` for backward AD.
 - `multi_threading = true`: if `true`, segments in the piecewise loss are computed in parallel.
+Currently not supported with `adtype = Optimization.Autozygote()` 
 
 # Examples
 ```julia
@@ -208,6 +209,8 @@ function _piecewise_MLE(infprob;
             @assert batchsizes[i] == length(idx_ranges...) "$OPT is not compatible with mini-batches - use `batchsizes = group_nb`"
         end
     end
+    p0 = get_p(infprob)
+    @assert all([p0[k] isa Array for k in keys(p0)]) "Each values of `p0` must be `Array`s"
 
     # initialising with data if not provided
     if isnothing(u0s_init) 

@@ -252,7 +252,8 @@ end
                         epochs = epochs, 
                         optimizers = optimizers,
                         batchsizes = batchsizes,
-                        adtype = Optimization.AutoZygote()
+                        adtype = Optimization.AutoZygote(),
+                        multi_threading=false
                         )
     p_trained = get_p_trained(res)
     @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-3 ))
