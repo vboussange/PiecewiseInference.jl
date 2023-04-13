@@ -4,9 +4,9 @@
     Need to overwrite the behavior of length(nc::NCcyle)
     because it does not correspond to what we aim at
 =#
-import Base.length
-import IterTools.NCycle
-length(nc::NCycle) = nc.n
+# import Base.length
+# import IterTools.NCycle
+# length(nc::NCycle) = nc.n
 
 """
 $(SIGNATURES)
@@ -210,7 +210,7 @@ function _piecewise_MLE(infprob;
         end
     end
     p0 = get_p(infprob)
-    @assert all([p0[k] isa Array for k in keys(p0)]) "Each values of `p0` must be `Array`s"
+    @assert all([p0[k] isa AbstractArray for k in keys(p0)]) "Each values of `p0` must be `Array`s"
 
     # initialising with data if not provided
     if isnothing(u0s_init) 
@@ -439,7 +439,7 @@ end
 
 function __solve(opt::OPT, optprob, idx_ranges, batchsizes, epochs, callback) where OPT
     @info "Running optimizer $OPT"
-    train_loader = Flux.DataLoader(idx_ranges; batchsize = batchsizes, shuffle = true, partial=false)
+    train_loader = Flux.DataLoader(idx_ranges; batchsize = batchsizes, shuffle = true, partial=true)
     res = Optimization.solve(optprob,
                             opt, 
                             ncycle(train_loader, epochs),
