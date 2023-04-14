@@ -13,14 +13,13 @@ The initial conditions are assumed free parameters for each segments.
   - `ranges`: Vector containg range for each segment.
   - `idx_rngs`: Vector containing the indices of the segments to be included in the loss
 """
-function piecewise_loss(
-                        infprob::InferenceProblem,
-                        θ::AbstractArray,
+function piecewise_loss(infprob::InferenceProblem,
+                        θ::AbstractArray{T},
                         ode_data::AbstractArray,
                         tsteps::AbstractArray,
                         ranges::AbstractArray,
                         idx_rngs, 
-                        multi_threading=true)
+                        multi_threading=true) where T
 
     model = get_model(infprob)
     nb_group = length(ranges)
@@ -31,14 +30,15 @@ function piecewise_loss(
     params = to_param_space(θ, infprob)
 
     # Calculate multiple shooting loss
-    loss = zero(eltype(θ))
-    group_predictions = Vector{Array{eltype(θ)}}(undef, length(ranges))
+    # needs to be of type θ to accept dual numbers
+    loss = zero(T)
+    group_predictions = Vector{Array{T}}(undef, length(ranges))
 
     if multi_threading
         Threads.@threads for i in idx_rngs
             rg = ranges[i]
-            u0_i = _get_u0s(infprob, θ, i, nb_group) # taking absolute value, assuming populations cannot be negative
-            data = ode_data[:, rg]
+            u0_i = _get_u0s(infprob, θ, i, nb_group)
+            data = @view ode_data[:, rg]
             tspan = (tsteps[first(rg)], tsteps[last(rg)])
             sol = simulate(model; u0 = u0_i, tspan = tspan, p = params, saveat = tsteps[rg])
 
@@ -52,7 +52,7 @@ function piecewise_loss(
 
             pred = sol |> Array
             loss += loss_likelihood(data, pred, rg) # negative loglikelihood
-            loss += loss_u0_prior(data[:,1], u0_i) # negative log u0 priors
+            loss += loss_u0_prior(@view(data[:,1]), u0_i) # negative log u0 priors
 
             # used for plotting, no need to differentiate
             Zygote.ignore() do
@@ -62,7 +62,7 @@ function piecewise_loss(
     else
         for i in idx_rngs
             rg = ranges[i]
-            u0_i = _get_u0s(infprob, θ, i, nb_group) # taking absolute value, assuming populations cannot be negative
+            u0_i = _get_u0s(infprob, θ, i, nb_group)
             data = ode_data[:, rg]
             tspan = (tsteps[first(rg)], tsteps[last(rg)])
             sol = simulate(model; u0 = u0_i, tspan = tspan, p = params, saveat = tsteps[rg])
@@ -96,7 +96,7 @@ end
 function _get_u0s(infprob::InferenceProblem, θ, i, nb_group)
     dim_prob = get_dims(infprob)
     @assert 0 < i <= nb_group "trying to access undefined segment"
-    ũ0 = θ.u0s[dim_prob*(i-1)+1:dim_prob*i]
+    ũ0 = @view θ.u0s[dim_prob*(i-1)+1:dim_prob*i]
     # projecting in true parameter space
     u0 = inverse(get_u0_bijector(infprob))(ũ0)
     return u0

@@ -47,6 +47,7 @@ batchsizes = [group_nb]
                         epochs = epochs, 
                         optimizers = optimizers,
                         batchsizes = batchsizes,
+                        multi_threading=false
                         )
     p_trained = get_p_trained(res)
     @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-3))
@@ -66,7 +67,7 @@ batchsizes = [1]
                         )
     p_trained = get_p_trained(res)
     @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-3 ))
-    @test length(res.losses) == sum(epochs) + 1
+    @test length(res.losses) == sum(epochs * group_nb) + 1
 end
 
 group_nb = 3
@@ -82,7 +83,7 @@ batchsizes = [2]
                         )
     p_trained = get_p_trained(res)
     @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-3))
-    @test length(res.losses) == sum(epochs) + 1
+    @test length(res.losses) == sum(epochs * group_nb) + 1
 end
 
 @testset "MLE 1 group" begin

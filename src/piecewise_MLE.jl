@@ -240,7 +240,7 @@ function _piecewise_MLE(infprob;
         p_trained = to_param_space(θ, infprob)
 
         if length(losses)%info_per_its==0
-            verbose_loss ? println("Current loss after $(length(losses)) iterations: $(losses[end])") : nothing
+            verbose_loss && (println("Loss after $(length(losses)) iterations: $(losses[end])"))
         end
         if !isnothing(cb)
             cb(p_trained, losses, pred, ranges)
