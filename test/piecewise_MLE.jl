@@ -83,7 +83,7 @@ batchsizes = [2]
                         )
     p_trained = get_p_trained(res)
     @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-3))
-    @test length(res.losses) == sum(epochs * group_nb) + 1
+    @test length(res.losses) == sum(epochs * 2) + 1
 end
 
 @testset "MLE 1 group" begin
