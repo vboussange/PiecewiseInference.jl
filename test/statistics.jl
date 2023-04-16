@@ -89,6 +89,21 @@ end
 
 end
 
+# old version of AIC
+# @testset "AIC" begin
+#     σ = 0.8
+#     odedata = true_data + σ * randn(size(true_data)...)
+#     # test loglikelihood from InferenceResult
+#     res = InferenceResult(infprob, 
+#                         Inf,
+#                         p_true, 
+#                         [u0],
+#                         [true_data],
+#                         [1:length(tsteps)],
+#                         [true_data])
+#     @test (AIC(res, odedata, MvNormal(zeros(length(u0)), σ^2 * LinearAlgebra.I)) isa Number)
+# end
+
 @testset "AIC" begin
     σ = 0.8
     odedata = true_data + σ * randn(size(true_data)...)
@@ -100,7 +115,7 @@ end
                         [true_data],
                         [1:length(tsteps)],
                         [true_data])
-    @test (AIC(res, odedata, MvNormal(zeros(length(u0)), σ^2 * LinearAlgebra.I)) isa Number)
+    @test (AIC(res, odedata, tsteps) isa Number)
 end
 
 

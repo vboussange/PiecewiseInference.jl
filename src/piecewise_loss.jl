@@ -44,7 +44,7 @@ function piecewise_loss(infprob::InferenceProblem,
 
             # Abort and return infinite loss if one of the integrations failed
             if !(SciMLBase.successful_retcode(sol.retcode))
-                Zygote.ignore() do
+                ignore_derivatives() do
                     @warn "got retcode $(sol.retcode)"
                 end
                 return Inf, group_predictions
@@ -55,7 +55,7 @@ function piecewise_loss(infprob::InferenceProblem,
             loss += loss_u0_prior(@view(data[:,1]), u0_i) # negative log u0 priors
 
             # used for plotting, no need to differentiate
-            Zygote.ignore() do
+            ignore_derivatives() do
                 group_predictions[i] = pred
             end
         end
@@ -69,7 +69,7 @@ function piecewise_loss(infprob::InferenceProblem,
 
             # Abort and return infinite loss if one of the integrations failed
             if !(SciMLBase.successful_retcode(sol.retcode))
-                Zygote.ignore() do
+                ignore_derivatives() do
                     @warn "got retcode $(sol.retcode)"
                 end
                 return Inf, group_predictions
@@ -80,7 +80,7 @@ function piecewise_loss(infprob::InferenceProblem,
             loss += loss_u0_prior(data[:,1], u0_i) # negative log u0 priors
 
             # used for plotting, no need to differentiate
-            Zygote.ignore() do
+            ChainRulesCore.ignore_derivatives() do
                 group_predictions[i] = pred
             end
         end

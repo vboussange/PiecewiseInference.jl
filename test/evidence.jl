@@ -70,5 +70,8 @@ infprob = InferenceProblem(model, p_init; p_bij, u0_bij, loss_likelihood)
 
 u0s = [ode_data[:, first(rg)] for rg in ranges]
 
-@test loglikelihood(ode_data_w_noise, tsteps, infprob, p_true, u0s; group_size) isa Number
-@test get_evidence(ode_data_w_noise, tsteps, infprob, p_true, u0s; group_size) isa Number
+
+datasize = size(ode_data,2)
+ranges = get_ranges(; datasize, group_size)
+@test loglikelihood(ode_data_w_noise, tsteps, infprob, p_true, u0s, ranges) isa Number
+@test get_evidence(ode_data_w_noise, tsteps, infprob, p_true, u0s, ranges) isa Number

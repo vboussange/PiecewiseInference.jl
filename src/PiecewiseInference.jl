@@ -24,7 +24,7 @@ module PiecewiseInference
     using Bijectors
     using SciMLBase
     using ComponentArrays
-    using Zygote
+    using ChainRulesCore # used to ignore blocks of code
 
     # parametric function
     abstract type ParamFun{N} end

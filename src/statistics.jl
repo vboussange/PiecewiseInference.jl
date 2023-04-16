@@ -97,10 +97,10 @@ $(SIGNATURES)
 
 Computes the AIC of `res` given the observational noise distribution `noisedistrib`.
 """
-function AIC(res::InferenceResult, data_set::Array, noisedistrib::Sampleable)
-    nparams = length(res.p_trained)
-    logl = loglikelihood(res, data_set, noisedistrib)
-    AIC_likelihood = - 2 * logl + 2 * nparams
+function AIC(data::Matrix, tsteps, infres::InferenceResult)
+    nparams = length(infres.p_trained)
+    logl = loglikelihood(data, tsteps, infres, infres.p_trained)
+    AIC_likelihood = AIC(logl, nparams)
     return AIC_likelihood
 end
 
