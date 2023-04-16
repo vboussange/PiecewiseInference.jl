@@ -20,6 +20,12 @@ Base.show(io::IO, res::InferenceResult) = println(io, "`InferenceResult` with mo
 
 get_p_trained(res::InferenceResult) = res.p_trained
 
+"""
+$SIGNATURES
+
+Outputs a forecast from `infres` over the time horizon specified by `tsteps_forecast`.
+Uses the IC inferred from the most recent segment.
+"""
 
 function forecast(infres::InferenceResult, tsteps_forecast)
 
@@ -33,3 +39,29 @@ function forecast(infres::InferenceResult, tsteps_forecast)
             saveat = tsteps_forecast)
 
 end
+
+# TODO: WIP The idea here was to validate the model using adjacent segments,
+# i.e. predict the next segment from the ICs of previous segment. Problem is
+# that all segments have been used during training, so that this would be an
+# unfair validation
+
+
+# function cross_validation(infres::InferenceResult, data::AbstractMatrix)
+#     tsteps = infres.infprob.m.mp.kwargs[:saveat]
+#     ranges = infres.ranges
+#     loss_likelihood = get_loss_likelihood(infres.infprob)
+#     ls = eltype(data)[]
+#     for i in 1:length(ranges)-1
+#         tspan = (tsteps[ranges[i][1]], tsteps[ranges[i+1][end]])
+#         tsteps_forecast =  tsteps[ranges[i+1]]
+        
+#         pred = simulate(infres.infprob.m, 
+#                         p = infres.p_trained, 
+#                         u0 = infres.u0s_trained[i], 
+#                         tspan = tspan,
+#                         saveat = tsteps_forecast) |> Array
+
+#         push!(ls, loss_likelihood(pred, data[:, ranges[i+1]]))
+#     end
+#     return ls
+# end
