@@ -1,7 +1,8 @@
+using PiecewiseInference
 using LinearAlgebra, ParametricModels, OrdinaryDiffEq, SciMLSensitivity
 using ComponentArrays
 using UnPack
-using OptimizationOptimisers
+using OptimizationOptimisers, OptimizationOptimJL
 using Test
 using PiecewiseInference
 using Distributions
@@ -13,17 +14,17 @@ function (m::MyModel)(du, u, p, t)
     du .=  0.1 .* u .* ( 1. .- b .* u) 
 end
 
-tsteps = 1.:0.5:100.5
+mystep = 0.5
+tsteps = 1.:(mystep):100.5
 tspan = (tsteps[1], tsteps[end])
 
 p_true = ComponentArray(b = [0.23, 0.5],)
 p_init= ComponentArray(b = [1., 2.],)
 
-p_bij = (b = bijector(Uniform(0.,3.)),)
-# u0_bij = bijector(Uniform(0.,5.))
-u0_bij = bijector(Uniform(0.,5.))
-
 u0 = ones(2)
+p_bij = (b = bijector(Uniform(1e-3, 5e0)),)
+u0_bij = bijector(Uniform(1e-3,5.))
+
 mp = ModelParams(;p = p_true, 
                 tspan,
                 u0, 
@@ -34,11 +35,10 @@ mp = ModelParams(;p = p_true,
 model = MyModel(mp)
 sol_data = simulate(model)
 ode_data = Array(sol_data)
-optimizers = [Adam(0.001)]
+optimizers = [Adam(0.01)]
 epochs = [10]
 
 infprob = InferenceProblem(model, p_init; p_bij, u0_bij)
-
 
 @testset "`InferenceResult``" begin
     res = InferenceResult(infprob, 
@@ -94,4 +94,27 @@ end
 
     #TODO: to implement
     # @test (AIC(res, ode_datas, diagm(ones(length(p_init)))) isa Number)
+end
+
+@testset "`forecast`" begin
+    res = piecewise_MLE(infprob;
+                        group_nb = 5, 
+                        data = ode_data, 
+                        tsteps = tsteps, 
+                        epochs = [8000, 200], 
+                        optimizers = [ADAM(0.001), LBFGS()],
+                        )
+
+    p_trained = get_p_trained(res)
+    @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-3))
+    tsteps_forecast = range(start = tsteps[end]+mystep, step = mystep, length=10)
+
+    forcasted_data = forecast(res, tsteps_forecast) |> Array
+    true_forecasted_data = simulate(model; 
+                                    u0 = ode_data[:,res.ranges[end][1]],
+                                    tspan = (tsteps[res.ranges[end][1]], tsteps_forecast[end]), 
+                                    saveat = tsteps_forecast) |> Array
+
+    @test all(isapprox.(forcasted_data, true_forecasted_data, rtol = 1e-3))
+
 end

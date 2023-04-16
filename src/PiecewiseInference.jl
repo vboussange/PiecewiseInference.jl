@@ -45,7 +45,7 @@ module PiecewiseInference
     end
 
     export InferenceProblem, get_p, get_p_bijector, get_u0_bijector, get_re, get_tspan, get_model, get_mp
-    export ParamFun, InferenceResult, get_p_trained
+    export ParamFun, InferenceResult, get_p_trained, forecast
     export group_ranges, AIC, AICc, AICc_TREE, moments!, moments, divisors
     export piecewise_loss
     export piecewise_MLE, piecewise_ML_indep_TS, iterative_piecewise_MLE, get_ranges
