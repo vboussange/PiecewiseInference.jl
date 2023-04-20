@@ -4,7 +4,7 @@
 [![Build status (Github Actions)](https://github.com/vboussange/PiecewiseInference.jl/workflows/CI/badge.svg)](https://github.com/vboussange/PiecewiseInference.jl/actions)
 [![codecov.io](http://codecov.io/github/vboussange/PiecewiseInference.jl/coverage.svg?branch=main)](http://codecov.io/github/vboussange/PiecewiseInference.jl?branch=main)
 
-Suite for inverse modelling of dynamical systems characterised by complex dynamics.
+Suite for inverse modelling of dynamical systems characterised by complex dynamics. PiecewiseInference.jl implements a \textbf{segmentation method} that \textbf{improves the convergence} of local search methods by regularizing the inference problem
 
 ![](docs/animated.gif)
 
