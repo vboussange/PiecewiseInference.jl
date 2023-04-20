@@ -4,7 +4,7 @@
 [![Build status (Github Actions)](https://github.com/vboussange/PiecewiseInference.jl/workflows/CI/badge.svg)](https://github.com/vboussange/PiecewiseInference.jl/actions)
 [![codecov.io](http://codecov.io/github/vboussange/PiecewiseInference.jl/coverage.svg?branch=main)](http://codecov.io/github/vboussange/PiecewiseInference.jl?branch=main)
 
-Suite for inverse modeling, combining ML techniques and mechanistic models (dynamical ODEs).
+Suite for inverse modelling of dynamical systems characterised by complex dynamics.
 
 ![](docs/animated.gif)
 
