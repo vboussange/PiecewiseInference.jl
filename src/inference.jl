@@ -90,7 +90,7 @@ epochs = [5000]
 group_nb = 2
 batchsizes = [1] # batch size used for each optimizer in optimizers (here only one)
 # you could also have `batchsizes = [group_nb]`
-res = piecewise_MLE(infprob,
+res = inference(infprob,
                     group_nb = group_nb, 
                     data = ode_data_wnoise, 
                     tsteps = tsteps, 
@@ -103,17 +103,17 @@ p_trained = get_p_trained(res)
 pred = res.pred
 ```
 """
-function piecewise_MLE(infprob; group_size = nothing, group_nb = nothing,  kwargs...)
+function inference(infprob; group_size = nothing, group_nb = nothing,  kwargs...)
     data = kwargs[:data]
     datasize = size(data,2)
     ranges = get_ranges(;group_size, group_nb, datasize)
-    _piecewise_MLE(infprob; ranges,  kwargs...)
+    _inference(infprob; ranges,  kwargs...)
 end
 
 """
 $(SIGNATURES)
 
-Similar to `piecewise_MLE` but for independent time series, where `data`
+Similar to `inference` but for independent time series, where `data`
 is a vector containing the independent arrays corresponding to the time series,
 and `tsteps` is a vector where each entry contains the time steps
 of the corresponding time series.
@@ -142,7 +142,7 @@ function piecewise_ML_indep_TS(infprob;
     ranges_cat = vcat(ranges_arr...)
     tsteps_cat = vcat(tsteps...)
 
-    res = _piecewise_MLE(infprob;
+    res = _inference(infprob;
                         ranges=ranges_cat,
                         data=data_cat, 
                         tsteps=tsteps_cat, 
@@ -179,10 +179,10 @@ function piecewise_ML_indep_TS(infprob;
     return res_arr
 end
 
-function _piecewise_MLE(infprob;
+function _inference(infprob;
                         data,
                         tsteps,
-                        ranges, # provided by `piecewise_MLE`
+                        ranges, # provided by `inference`
                         optimizers = [ADAM(0.01), BFGS(initial_stepnorm=0.01)],
                         epochs = [1000, 200],
                         batchsizes = fill(length(ranges),length(epochs)),
@@ -232,7 +232,7 @@ function _piecewise_MLE(infprob;
     __loss(x, p, idx_rngs=idx_ranges...) = _loss(x, idx_rngs) #used for the "Optimization function"
 
     nb_group = length(ranges)
-    println("piecewise_MLE with $(length(tsteps)) points and $nb_group groups.")
+    println("inference with $(length(tsteps)) points and $nb_group groups.")
 
     # Here we need a default behavior for Optimization.jl (see https://github.com/SciML/Optimization.jl/blob/c0a51120c7c54a89d091b599df30eb40c4c0952b/lib/OptimizationFlux/src/OptimizationFlux.jl#L53)
     callback(θ, l, pred=[]) = begin
@@ -344,7 +344,7 @@ Performs a iterative piecewise MLE, iterating over `group_sizes`.
 Stops the iteration when loss function increases between two iterations.
 
 Returns an array with all `InferenceResult` obtained during the iteration.
-For kwargs, see `piecewise_MLE`.
+For kwargs, see `inference`.
 
 # Note 
 - for now, does not support independent time series (`piecewise_ML_indep_TS`).
@@ -354,7 +354,7 @@ For kwargs, see `piecewise_MLE`.
 - `group_sizes` : array of group sizes to test
 - `optimizers_array`: optimizers_array[i] is an array of optimizers for the trainging process of `group_sizes[i]`
 """
-function iterative_piecewise_MLE(infprob;group_sizes = nothing,
+function iterative_inference(infprob;group_sizes = nothing,
                                 group_nbs = nothing,
                                 optimizers_array,
                                 threshold = 1e-16,
@@ -386,7 +386,7 @@ function iterative_piecewise_MLE(infprob;group_sizes = nothing,
         println("***************\nIterative training with $(length(ranges)) segment(s)\n***************")
 
         u0s_init = _initialise_u0s_iterative_piecewise_ML(res.pred,res.ranges,ranges)
-        tempres = _piecewise_MLE(infprob;
+        tempres = _inference(infprob;
                                 ranges = ranges, 
                                 optimizers = optimizers_array[i],
                                 u0s_init = u0s_init,

@@ -35,9 +35,11 @@ module PiecewiseInference
     include("InferenceResult.jl")
     include("utils.jl")
     include("piecewise_loss.jl")
-    include("piecewise_MLE.jl")
+    include("inference.jl")
     include("statistics.jl")
     include("evidence.jl")
+
+    Base.@deprecate piecewise_MLE(args...; kwargs...) inference(args...; kwargs...)
 
     plot_convergence(args...;kwargs...) = println("Plotting requires loading package `PyPlot`")
     function __init__()
@@ -48,7 +50,7 @@ module PiecewiseInference
     export ParamFun, InferenceResult, get_p_trained, forecast
     export group_ranges, AIC, AICc, AICc_TREE, moments!, moments, divisors
     export piecewise_loss
-    export piecewise_MLE, piecewise_ML_indep_TS, iterative_piecewise_MLE, get_ranges
+    export inference, piecewise_ML_indep_TS, iterative_inference, get_ranges
     export plot_convergence
     export FIM_strouwen, FIM_yazdani, loglikelihood, estimate_σ, RSS, R2, pretty_print, loss_param_prior_from_dict, get_evidence
 end # module

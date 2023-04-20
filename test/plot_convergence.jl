@@ -70,7 +70,7 @@ end
     optimizers = [Adam(0.01)]
 
     isdir("figures") ? nothing : mkdir("figures") 
-    res = piecewise_MLE(p_init = p_init, 
+    res = inference(p_init = p_init, 
                         group_size = 101, 
                         data_set = ode_data, 
                         prob = prob, 

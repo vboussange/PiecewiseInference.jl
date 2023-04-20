@@ -38,7 +38,7 @@ group_nb = 2
 batchsizes = [group_nb]
 
 # Multithreading
-@time res = piecewise_MLE(infprob;
+@time res = inference(infprob;
                     group_nb = group_nb, 
                     data = ode_data, 
                     tsteps = tsteps, 
@@ -50,7 +50,7 @@ batchsizes = [group_nb]
 # 0.768009 seconds (5.94 M allocations: 914.722 MiB, 11.30% gc time)
 
 # No Multithreading
-@time res = piecewise_MLE(infprob;
+@time res = inference(infprob;
                     group_nb = group_nb, 
                     data = ode_data, 
                     tsteps = tsteps, 

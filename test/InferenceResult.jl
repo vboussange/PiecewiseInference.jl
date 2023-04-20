@@ -58,7 +58,7 @@ end
     ode_data_wn = Array(sol_data) 
     ode_data_wn .+=  randn(size(ode_data)) .* σ
 
-    res = piecewise_MLE(infprob;
+    res = inference(infprob;
                         group_size = 101, 
                         data = ode_data_wn, 
                         tsteps = tsteps, 
@@ -97,7 +97,7 @@ end
 end
 
 @testset "`forecast`" begin
-    res = piecewise_MLE(infprob;
+    res = inference(infprob;
                         group_nb = 5, 
                         data = ode_data, 
                         tsteps = tsteps, 

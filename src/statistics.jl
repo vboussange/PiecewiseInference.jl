@@ -36,7 +36,7 @@ end
 # It can be `:MvLogNormal` or `:MvNormal` (comprising the multivariate types)
 # """
 # function loglikelihood(res::InferenceResult, data_set::Array, noisedistrib::Sampleable)
-#     isempty(res.pred) ? error("`res.pred` should not be empty, use `piecewise_MLE` with `save_pred = true`") : nothing
+#     isempty(res.pred) ? error("`res.pred` should not be empty, use `inference` with `save_pred = true`") : nothing
 #     return loglikelihood(res.pred, res.ranges, data_set, noisedistrib)
 # end
 

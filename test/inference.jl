@@ -39,8 +39,8 @@ optimizers = [ADAM(0.001)]
 epochs = [4000]
 group_nb = 2
 batchsizes = [group_nb]
-@testset "piecewise MLE" begin
-    res = piecewise_MLE(infprob;
+@testset "piecewise inference" begin
+    res = inference(infprob;
                         group_nb = group_nb, 
                         data = ode_data, 
                         tsteps = tsteps, 
@@ -56,8 +56,8 @@ batchsizes = [group_nb]
 end
 
 batchsizes = [1]
-@testset "piecewise MLE, SGD" begin
-    res = piecewise_MLE(infprob;
+@testset "piecewise inference, SGD" begin
+    res = inference(infprob;
                         group_nb = group_nb, 
                         data = ode_data, 
                         tsteps = tsteps, 
@@ -72,8 +72,8 @@ end
 
 group_nb = 3
 batchsizes = [2]
-@testset "piecewise MLE, minibatch" begin
-    res = piecewise_MLE(infprob; 
+@testset "piecewise inference, minibatch" begin
+    res = inference(infprob; 
                         group_nb = group_nb, 
                         data = ode_data, 
                         tsteps = tsteps, 
@@ -86,9 +86,9 @@ batchsizes = [2]
     @test length(res.losses) == sum(epochs * 2) + 1
 end
 
-@testset "MLE 1 group" begin
+@testset "inference 1 group" begin
     ode_data_wnoise = ode_data .+ randn(size(ode_data)) .* 0.1
-    res = piecewise_MLE(infprob;
+    res = inference(infprob;
                         group_nb = 1, 
                         data = ode_data_wnoise, 
                         tsteps = tsteps, 
@@ -100,11 +100,11 @@ end
     @test length(res.losses) == sum(epochs) + 1
 end
 
-@testset "MLE 1 group, LBFGS" begin
+@testset "inference 1 group, LBFGS" begin
     optimizers = [LBFGS()]
     epochs = [5000]
     ode_data_wnoise = ode_data .+ randn(size(ode_data)) .* 0.1
-    res = piecewise_MLE(infprob; 
+    res = inference(infprob; 
                         group_nb = 1, 
                         data = ode_data_wnoise, 
                         tsteps = tsteps, 
@@ -116,12 +116,12 @@ end
     @test length(res.losses) <= sum(epochs) + 1
 end
 
-@testset "MLE 1 group, ADAM, then LBFGS" begin
+@testset "inference 1 group, ADAM, then LBFGS" begin
     optimizers = [ADAM(0.01), LBFGS()]
     epochs = [1000,200]
     batchsizes = [1,2]
     ode_data_wnoise = ode_data .+ randn(size(ode_data)) .* 0.1
-    res = piecewise_MLE(infprob;
+    res = inference(infprob;
                         group_nb = 2, 
                         data = ode_data_wnoise, 
                         tsteps = tsteps, 
@@ -133,7 +133,7 @@ end
     @test length(res.losses) <= sum(epochs) + 1
 end
 
-@testset "piecewise MLE independent TS" begin
+@testset "piecewise inference independent TS" begin
     tsteps_arr = [tsteps[1:30],tsteps[31:60],tsteps[61:90]] # 3 ≠ time steps with ≠ length
 
     u0s = [rand(2) .+ 1, rand(2) .+ 1, rand(2) .+ 1]
@@ -173,7 +173,7 @@ end
     @test all([all(u0_2_i .== 1.) for u0_2_i in u0_2])
 end
 
-@testset "Iterative piecewise MLE" begin
+@testset "Iterative piecewise inference" begin
     ode_data_wnoise = ode_data .+ randn(size(ode_data)) .* 0.1
     group_size_init = 51
 
@@ -183,7 +183,7 @@ end
     group_sizes = vcat(group_size_init, div_data[div_data .> group_size_init] .+ 1)
     optimizers_array = [[ADAM(0.001)] for _ in 1:length(group_sizes)]
     epochs = [5000]
-    res_array = iterative_piecewise_MLE(infprob,
+    res_array = iterative_inference(infprob,
                                         group_sizes = group_sizes, 
                                         optimizers_array = optimizers_array,
                                         epochs = epochs,
@@ -195,7 +195,7 @@ end
 end
 
 
-@testset "piecewise MLE, SGD, with priors" begin
+@testset "piecewise inference, SGD, with priors" begin
     batchsizes = [3]
     group_nb = 3
     param_distrib = Dict(:b => MvNormal([0.23, 0.4], [2., 2.]))
@@ -203,7 +203,7 @@ end
 
     infprob = InferenceProblem(model, p_init; p_bij, u0_bij, loss_param_prior)
 
-    res = piecewise_MLE(infprob;
+    res = inference(infprob;
                         group_nb = group_nb, 
                         data = ode_data, 
                         tsteps = tsteps, 
@@ -216,7 +216,7 @@ end
     @test length(res.losses) == sum(epochs) + 1
 end
 
-@testset "piecewise MLE, SGD, with priors, adtype = AutoZygote()" begin
+@testset "piecewise inference, SGD, with priors, adtype = AutoZygote()" begin
     p_true = ComponentArray(b = [0.23, 0.5],)
     p_init= ComponentArray(b = [1., 2.],)
     
@@ -246,7 +246,7 @@ end
 
     infprob = InferenceProblem(model, p_init; p_bij, u0_bij, loss_param_prior)
 
-    res = piecewise_MLE(infprob;
+    res = inference(infprob;
                         group_nb = group_nb, 
                         data = ode_data, 
                         tsteps = tsteps, 
