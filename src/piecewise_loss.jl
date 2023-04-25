@@ -63,7 +63,7 @@ function piecewise_loss(infprob::InferenceProblem,
         for i in idx_rngs
             rg = ranges[i]
             u0_i = _get_u0s(infprob, θ, i, nb_group)
-            data = ode_data[:, rg]
+            data = @view ode_data[:, rg]
             tspan = (tsteps[first(rg)], tsteps[last(rg)])
             sol = simulate(model; u0 = u0_i, tspan = tspan, p = params, saveat = tsteps[rg])
 

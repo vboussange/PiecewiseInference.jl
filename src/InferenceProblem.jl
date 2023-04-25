@@ -1,11 +1,11 @@
 Base.@kwdef struct InferenceProblem{M <: AbstractModel,P,PP,U0P,LL,PB,UB}
-    m::M
-    p0::P
-    loss_param_prior::PP
-    loss_u0_prior::U0P
-    loss_likelihood::LL
-    p_bij::PB
-    u0_bij::UB
+    m::M # model inheriting ParametricModels.AbstractModel
+    p0::P # parameter ComponentArray
+    loss_param_prior::PP # loss used to directly constrain parameters
+    loss_u0_prior::U0P # loss used to directly constrain ICs
+    loss_likelihood::LL # loss functions
+    p_bij::PB # a dictionary or named tuple containing bijectors applied to parameter components
+    u0_bij::UB # bijectors applieds to ICs
 end
 
 """
