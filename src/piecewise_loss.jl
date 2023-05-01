@@ -28,15 +28,16 @@ function piecewise_loss(infprob::InferenceProblem,
 
     # Calculate multiple shooting loss
     # needs to be of type θ to accept dual numbers
-    loss_segments = Vector{T}(undef, length(ranges))
     group_predictions = Vector{Array{T}}(undef, length(ranges))
 
     # TODO: this could rewritten with inspiration or reuse from "ensemble solve" at:
     # https://github.com/SciML/SciMLBase.jl/blob/master/src/ensemble/basic_ensemble_solve.jl
     if multi_threading
-        Threads.@threads for i in idx_rngs
-            rg = ranges[i]
-            u0_i = _get_u0s(infprob, θ, i, nb_group)
+        loss_segments = Vector{T}(undef, length(idx_rngs))
+        Threads.@threads for j in 1:length(idx_rngs)
+            idx = idx_rngs[j]
+            rg = ranges[idx]
+            u0_i = _get_u0s(infprob, θ, idx, nb_group)
             l, gp = segment_loss(rg, 
                                 u0_i, 
                                 infprob,
@@ -46,13 +47,16 @@ function piecewise_loss(infprob::InferenceProblem,
             if isinf(l)
                 return l, group_predictions
             else
-                loss_segments[i], group_predictions[i] = l, gp
+                loss_segments[j], group_predictions[j] = l, gp
             end
         end
+        loss = sum(loss_segments)
     else
-        for i in idx_rngs
-            rg = ranges[i]
-            u0_i = _get_u0s(infprob, θ, i, nb_group)
+        loss = zero(T)
+        for j in 1:length(idx_rngs)
+            idx = idx_rngs[j]
+            rg = ranges[idx]
+            u0_i = _get_u0s(infprob, θ, idx, nb_group)
             l, gp = segment_loss(rg, 
                                 u0_i, 
                                 infprob,
@@ -62,12 +66,15 @@ function piecewise_loss(infprob::InferenceProblem,
             if isinf(l)
                 return l, group_predictions
             else
-                loss_segments[i], group_predictions[i] = l, gp
+                loss += l
+                ignore_derivatives() do
+                    group_predictions[idx] = gp
+                end
+
             end
         end
     end
 
-    loss = sum(loss_segments)
     # adding priors
     loss += loss_param_prior(params) # negative log param priors
 
