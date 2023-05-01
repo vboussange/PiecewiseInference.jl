@@ -2,7 +2,13 @@
 Benchmarking threads vs non threads
 =#
 using PiecewiseInference
-
+using ParametricModels
+using SciMLSensitivity
+using OrdinaryDiffEq
+using ComponentArrays
+using Bijectors
+using UnPack
+using OptimizationOptimisers, OptimizationFlux, OptimizationOptimJL
 
 @model MyModel
 function (m::MyModel)(du, u, p, t)
