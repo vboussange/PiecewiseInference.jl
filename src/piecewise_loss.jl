@@ -21,77 +21,87 @@ function piecewise_loss(infprob::InferenceProblem,
                         idx_rngs, 
                         multi_threading=true) where T
 
-    model = get_model(infprob)
-    nb_group = length(ranges)
-    loss_likelihood = get_loss_likelihood(infprob)
-    loss_u0_prior = get_loss_u0_prior(infprob)
-    loss_param_prior = get_loss_param_prior(infprob)
 
+    nb_group = length(ranges)
     params = to_param_space(θ, infprob)
+    loss_param_prior = get_loss_param_prior(infprob)
 
     # Calculate multiple shooting loss
     # needs to be of type θ to accept dual numbers
-    loss = zero(T)
+    loss_segments = Vector{T}(undef, length(ranges))
     group_predictions = Vector{Array{T}}(undef, length(ranges))
 
+    # TODO: this could rewritten with inspiration or reuse from "ensemble solve" at:
+    # https://github.com/SciML/SciMLBase.jl/blob/master/src/ensemble/basic_ensemble_solve.jl
     if multi_threading
         Threads.@threads for i in idx_rngs
             rg = ranges[i]
             u0_i = _get_u0s(infprob, θ, i, nb_group)
-            data = @view ode_data[:, rg]
-            tspan = (tsteps[first(rg)], tsteps[last(rg)])
-            sol = simulate(model; u0 = u0_i, tspan = tspan, p = params, saveat = tsteps[rg])
-
-            # Abort and return infinite loss if one of the integrations failed
-            if !(SciMLBase.successful_retcode(sol.retcode))
-                ignore_derivatives() do
-                    @warn "got retcode $(sol.retcode)"
-                end
-                return Inf, group_predictions
-            end
-
-            pred = sol |> Array
-            loss += loss_likelihood(data, pred, rg) # negative loglikelihood
-            loss += loss_u0_prior(@view(data[:,1]), u0_i) # negative log u0 priors
-
-            # used for plotting, no need to differentiate
-            ignore_derivatives() do
-                group_predictions[i] = pred
+            l, gp = segment_loss(rg, 
+                                u0_i, 
+                                infprob,
+                                params,
+                                ode_data,
+                                tsteps)
+            if isinf(l)
+                return l, group_predictions
+            else
+                loss_segments[i], group_predictions[i] = l, gp
             end
         end
     else
         for i in idx_rngs
             rg = ranges[i]
             u0_i = _get_u0s(infprob, θ, i, nb_group)
-            data = @view ode_data[:, rg]
-            tspan = (tsteps[first(rg)], tsteps[last(rg)])
-            sol = simulate(model; u0 = u0_i, tspan = tspan, p = params, saveat = tsteps[rg])
-
-            # Abort and return infinite loss if one of the integrations failed
-            if :retcode in fieldnames(typeof(sol))
-                if !(SciMLBase.successful_retcode(sol.retcode))
-                    ignore_derivatives() do
-                        @warn "got retcode $(sol.retcode)"
-                    end
-                    return Inf, group_predictions
-                end
-            end
-
-            pred = sol |> Array
-            loss += loss_likelihood(data, pred, rg) # negative loglikelihood
-            loss += loss_u0_prior(data[:,1], u0_i) # negative log u0 priors
-
-            # used for plotting, no need to differentiate
-            ChainRulesCore.ignore_derivatives() do
-                group_predictions[i] = pred
+            l, gp = segment_loss(rg, 
+                                u0_i, 
+                                infprob,
+                                params,
+                                ode_data,
+                                tsteps)
+            if isinf(l)
+                return l, group_predictions
+            else
+                loss_segments[i], group_predictions[i] = l, gp
             end
         end
     end
 
+    loss = sum(loss_segments)
     # adding priors
     loss += loss_param_prior(params) # negative log param priors
 
     return loss, group_predictions
+end
+
+function segment_loss(rg, 
+                    u0_i,
+                    infprob,
+                    params,
+                    ode_data,
+                    tsteps)
+
+    model = get_model(infprob)
+    loss_likelihood = get_loss_likelihood(infprob)
+    loss_u0_prior = get_loss_u0_prior(infprob)
+
+    data = @view ode_data[:, rg]
+    tspan = (tsteps[first(rg)], tsteps[last(rg)])
+    tstep_i = @view tsteps[rg]
+    sol = simulate(model; u0 = u0_i, tspan = tspan, p = params, saveat = tstep_i)
+
+    # Return infinite loss if one of the integrations failed
+    if !(SciMLBase.successful_retcode(sol.retcode))
+        ignore_derivatives() do
+            @warn "got retcode $(sol.retcode)"
+        end
+        return Inf, nothing
+    else
+        pred = sol |> Array
+        loss = loss_likelihood(data, pred, tstep_i) # negative loglikelihood
+        loss += loss_u0_prior(@view(data[:,1]), u0_i) # negative log u0 priors
+        return loss, pred
+    end
 end
 
 # projecting θ in optimization space to u0 for segment i in true parameter space
