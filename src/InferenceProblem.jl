@@ -16,13 +16,17 @@ $(SIGNATURES)
 - `p0`: initial guess of the parameters. Should be a named tuple.
 
 ## Optional
-- `p_bij`: a dictionary containing bijectors, to constrain parameter values and initial conditions
-- `loss_param_prior` is a function with arguments `p::NamedTuple`. Should correspond to parameter priors.
-By default, `loss_param_prior(p) = 0`.
-- `loss_u0_prior` is a function with arguments `u0_pred, u0_data`. Should correspond to IC priors.
-By default it corresponds to RSS between `u0` and the corresponding data point.
+- `p_bij`: a dictionary containing bijectors, to constrain parameter values and
+  initial conditions
+- `loss_param_prior` is a function with arguments `p::NamedTuple`. Should
+correspond to parameter priors. By default, `loss_param_prior(p) = 0`.
+- `loss_u0_prior` is a function with arguments `u0_pred, u0_data`. Should
+correspond to IC priors. By default it corresponds to RSS between `u0` and the
+corresponding data point.
 - `loss_likelihood` is a function that matches the predictions and the data,
-which should have as arguments `data, pred, rng`. By default, it corresponds to the RSS.
+which should have as arguments `data, pred, tsteps`, where `tsteps` correspond
+to the time steps of `data` and `pred`. By default, it corresponds to the RSS
+between `data` and `preds`.
 """
 function InferenceProblem(model::M, 
                             p0::T;
@@ -77,7 +81,7 @@ get_loss_u0_prior(prob::InferenceProblem) = prob.loss_u0_prior
 #=
 Default priors and likelihoods
 =#
-function _default_loss_likelihood(data, pred, rg)
+function _default_loss_likelihood(data, pred, tsteps)
     l = sum((data - pred).^2)
     return l
 end

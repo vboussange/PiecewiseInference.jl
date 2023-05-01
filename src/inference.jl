@@ -1,46 +1,112 @@
-# for more intuition on kwargs : https://discourse.julialang.org/t/passing-kwargs-can-overwrite-other-keyword-arguments/74933
-
-#=
-    Need to overwrite the behavior of length(nc::NCcyle)
-    because it does not correspond to what we aim at
-=#
-# import Base.length
-# import IterTools.NCycle
-# length(nc::NCycle) = nc.n
-
 """
 $(SIGNATURES)
 
-Piecewise inference. Loops through the optimizers `optimizers`.
-Returns a `InferenceResult`.
+Similar to `inference` but for independent time series, where `data`
+is a vector containing the independent arrays corresponding to the time series,
+and `tsteps` is a vector where each entry contains the time steps
+of the corresponding time series.
+"""
+function piecewise_ML_indep_TS(infprob;
+                                data,
+                                group_size = nothing, 
+                                group_nb = nothing,
+                                tsteps::Vector, #corresponding time steps
+                                save_pred = true, # saving prediction
+                                save_losses = true, # saving prediction
+                                kwargs...)
+    @assert length(tsteps) == length(data) "Independent time series must be gathered as a Vector"
+    @assert all(size(data[1],1) .== size.(data, 1)) "Independent time series must have same state variable dimension"
 
+    datasize_arr = size.(data,2)
+    ranges_arr = [get_ranges(;group_size, group_nb, datasize = datasize_arr[i]) for i in 1:length(data)]
+    # updating to take into account the shift provoked by concatenating independent TS
+    ranges_shift = cumsum(datasize_arr) # shift
+    for i in 2:length(ranges_arr)
+        for j in 1:length(ranges_arr[i]) # looping through rng in each independent TS
+            ranges_arr[i][j] = ranges_shift[i-1] .+ ranges_arr[i][j] #adding shift to the start of the range
+        end
+    end
+    data_cat = cat(data...,dims=2)
+    ranges_cat = vcat(ranges_arr...)
+    tsteps_cat = vcat(tsteps...)
+
+    res = inference(infprob;
+                        ranges=ranges_cat,
+                        data=data_cat, 
+                        tsteps=tsteps_cat, 
+                        kwargs...) 
+                        # this overrides kwargs, essential as it does not 
+                        # make sense to have continuity across indepdenent TS
+                        # NOTE: we could have continuity within a time series, 
+                        # this must be carefully thought out.
+        
+    # reconstructing the problem with original format
+    ranges_arr = [get_ranges(;group_size, group_nb, datasize = datasize_arr[i]) for i in 1:length(data)]
+    idx_res = [0;cumsum(length.(ranges_arr))]
+
+    # group u0s in vector of u0s, 
+    # [[u_0_TS1_1, ..., u_0_TS1_n],...,[u_0_TS1_1,...]]
+    u0s_trained_arr = [res.u0s_trained[idx_res[i]+1:idx_res[i+1]] for i in 1:length(data)]
+    
+    if save_pred
+        # group back the time series in vector, to have
+        # pred = [ [mibibatch_1_ts_1, mibibatch_2_ts_1...],  [mibibatch_1_ts_2, mibibatch_2_ts_2...] ...]
+        pred_arr = [res.pred[idx_res[i]+1:idx_res[i+1]] for i in 1:length(data)]
+    else
+        pred_arr = nothing
+    end
+    save_losses ? losses = res.losses : losses = nothing
+
+    res_arr = InferenceResult(infprob,
+                            res.minloss,
+                            res.p_trained,
+                            u0s_trained_arr, 
+                            pred_arr, 
+                            ranges_arr, 
+                            losses,)
+    return res_arr
+end
+
+"""
+$(SIGNATURES)
+performs piecewise inference for a given `InferenceProblem` and `data`. Loops
+through the optimizers `optimizers`. Returns a `InferenceResult`.
 # Arguments
-- `infprob`: the InferenceProblem
-- `opt` : array of optimizers
-- `group_size` : size of segments
-- `group_nb`: alternatively to `group_size`, one can ask for a certain number of segments
-- `data` : data
-- `tsteps` : corresponding to data
-
+- `infprob`:  An instance of `InferenceProblem` that defines the model, the
+  parameter constraints and its likelihood function.
+- `opt` : An array of optimizers that will be used to maximize the likelihood
+  (minimize the loss).
+- `group_size` : The size of the segments. It is an alternative to `group_nb`,
+  and specifies the number of data point in each segment.
+- `group_nb`: Alternatively to `group_size`, one can ask for a certain number of
+  segments.
+- `ranges`: Alternatively to `group_size` and `group_nb`, one can directly
+  provide a vector of indices, where each entry corresponds to the indices of a
+  segment. Possibly provided by `get_ranges`. 
+- `data` : The data to fit.
+- `tsteps` : The time steps for which the data was recorded.
 # Optional
-- `u0_init` : if not provided, we initialise from `data`
+- `u0_init` : A vector of initial guesses for the initial conditions for each
+  segment. If not provided, initial guesses are initialized from the `data`.
 - `optimizers` : array of optimizers, e.g. `[Adam(0.01)]`
-- `epochs` : number of epochs, which length should match that of `optimizers`
-- `batchsizes`: array of batch size, which length should match that of `optimizers`
-- `verbose_loss` : displaying loss
-- `info_per_its` = 50,
-- `plotting` : plotting convergence loss
-- `info_per_its` = 50,
-- `cb` : call back function.
-    Must be of the form `cb(θs, p_trained, losses, pred, ranges)`
-- `threshold` : default to 1e-6
-- `save_pred = true` saves predictions
-- `save_losses = true` saves losses
-- `adtype = Optimization.AutoForwardDiff()` : AD type to be used. Can be `Optimization.AutoForwardDiff()` 
-for forward AD, or `Optimization.Autozygote()` for backward AD.
-- `multi_threading = true`: if `true`, segments in the piecewise loss are computed in parallel.
-Currently not supported with `adtype = Optimization.Autozygote()` 
-
+- `epochs` : A vector with number of epochs for each optimizer in `optimizers`.
+- `batchsizes`: An vector of batch sizes, which should match the length of
+  `optimizers`.
+- `verbose_loss` : Whether to display loss during training.
+- `info_per_its = 50`: The frequency at which to display the training
+  information.
+- `plotting` :  Whether to plot the convergence loss during training.
+- `cb` :  A call back function. Must be of the form `cb(θs, p_trained, losses,
+  pred, ranges)`.
+- `threshold` : The tolerance for stopping training.
+- `save_pred = true`: Whether to save the predictions.
+- `save_losses = true` : Whether to save the losses.
+- `adtype = Optimization.AutoForwardDiff()` : The automatic differentiation (AD)
+  type to be used. Can be `Optimization.AutoForwardDiff()` for forward AD or
+ `Optimization.Autozygote()` for backward AD.
+- `multi_threading = true`: if `true`, segments in the piecewise loss are
+computed in parallel. Currently not supported with `adtype =
+Optimization.Autozygote()` 
 # Examples
 ```julia
 using SciMLSensitivity # provides diffential equation sensitivity methods
@@ -83,7 +149,7 @@ p_bij = (bijector(Uniform(1e-3, 5e0)),)
 u0_bij = bijector(Uniform(1e-3,5.))
 distrib_noise = MvNormal(ones(2) * σ_noise^2)
 # defining `loss_likelihood`
-loss_likelihood(data, pred, rng) = sum(logpdf(distrib_noise, data .- pred))
+loss_likelihood(data, pred, tsteps) = sum(logpdf(distrib_noise, data .- pred))
 infprob = InferenceProblem(model, p_init; p_bij, u0_bij)
 optimizers = [ADAM(0.001)]
 epochs = [5000]
@@ -98,108 +164,44 @@ res = inference(infprob,
                     optimizers = optimizers,
                     batchsizes = batchsizes,
                     )
-
 p_trained = get_p_trained(res)
 pred = res.pred
-```
 """
-function inference(infprob; group_size = nothing, group_nb = nothing,  kwargs...)
-    data = kwargs[:data]
-    datasize = size(data,2)
-    ranges = get_ranges(;group_size, group_nb, datasize)
-    _inference(infprob; ranges,  kwargs...)
-end
-
-"""
-$(SIGNATURES)
-
-Similar to `inference` but for independent time series, where `data`
-is a vector containing the independent arrays corresponding to the time series,
-and `tsteps` is a vector where each entry contains the time steps
-of the corresponding time series.
-"""
-function piecewise_ML_indep_TS(infprob;
-                                data,
-                                group_size = nothing, 
-                                group_nb = nothing,
-                                tsteps::Vector, #corresponding time steps
-                                save_pred = true, # saving prediction
-                                save_losses = true, # saving prediction
-                                kwargs...)
-    @assert length(tsteps) == length(data) "Independent time series must be gathered as a Vector"
-    @assert all(size(data[1],1) .== size.(data, 1)) "Independent time series must have same state variable dimension"
-
-    datasize_arr = size.(data,2)
-    ranges_arr = [get_ranges(;group_size, group_nb, datasize = datasize_arr[i]) for i in 1:length(data)]
-    # updating to take into account the shift provoked by concatenating independent TS
-    ranges_shift = cumsum(datasize_arr) # shift
-    for i in 2:length(ranges_arr)
-        for j in 1:length(ranges_arr[i]) # looping through rng in each independent TS
-            ranges_arr[i][j] = ranges_shift[i-1] .+ ranges_arr[i][j] #adding shift to the start of the range
-        end
-    end
-    data_cat = cat(data...,dims=2)
-    ranges_cat = vcat(ranges_arr...)
-    tsteps_cat = vcat(tsteps...)
-
-    res = _inference(infprob;
-                        ranges=ranges_cat,
-                        data=data_cat, 
-                        tsteps=tsteps_cat, 
-                        kwargs...) 
-                        # this overrides kwargs, essential as it does not 
-                        # make sense to have continuity across indepdenent TS
-                        # NOTE: we could have continuity within a time series, 
-                        # this must be carefully thought out.
-        
-    # reconstructing the problem with original format
-    ranges_arr = [get_ranges(;group_size, group_nb, datasize = datasize_arr[i]) for i in 1:length(data)]
-    idx_res = [0;cumsum(length.(ranges_arr))]
-
-    # group u0s in vector of u0s, 
-    # [[u_0_TS1_1, ..., u_0_TS1_n],...,[u_0_TS1_1,...]]
-    u0s_trained_arr = [res.u0s_trained[idx_res[i]+1:idx_res[i+1]] for i in 1:length(data)]
-    
-    if save_pred
-        # group back the time series in vector, to have
-        # pred = [ [mibibatch_1_ts_1, mibibatch_2_ts_1...],  [mibibatch_1_ts_2, mibibatch_2_ts_2...] ...]
-        pred_arr = [res.pred[idx_res[i]+1:idx_res[i+1]] for i in 1:length(data)]
-    else
-        pred_arr = nothing
-    end
-    save_losses ? losses = res.losses : losses = nothing
-
-    res_arr = InferenceResult(infprob,
-                            res.minloss,
-                            res.p_trained,
-                            u0s_trained_arr, 
-                            pred_arr, 
-                            ranges_arr, 
-                            losses,)
-    return res_arr
-end
-
-function _inference(infprob;
-                        data,
-                        tsteps,
-                        ranges, # provided by `inference`
-                        optimizers = [ADAM(0.01), BFGS(initial_stepnorm=0.01)],
-                        epochs = [1000, 200],
-                        batchsizes = fill(length(ranges),length(epochs)),
-                        verbose_loss = true,
-                        plotting = false,
-                        info_per_its=50,
-                        cb = nothing,
-                        threshold = -Inf,
-                        save_pred = true,
-                        save_losses = true,
-                        u0s_init = nothing,
-                        adtype = Optimization.AutoForwardDiff(),
-                        multi_threading=true
-                        )
+function inference(infprob;
+                    data,
+                    tsteps,
+                    group_size = nothing, 
+                    group_nb = nothing,
+                    ranges = nothing, # provided by `inference`
+                    optimizers = [ADAM(0.01), BFGS(initial_stepnorm=0.01)],
+                    epochs = [1000, 200],
+                    batchsizes = nothing,
+                    verbose_loss = true,
+                    plotting = false,
+                    info_per_its=50,
+                    cb = nothing,
+                    threshold = -Inf,
+                    save_pred = true,
+                    save_losses = true,
+                    u0s_init = nothing,
+                    adtype = Optimization.AutoForwardDiff(),
+                    multi_threading=false)
     model = get_model(infprob)
     dim_prob = get_dims(model) #used by loss_nm
+
+    # generating segment time indices (`ranges`) from kwargs
+    if (isnothing(group_size) + isnothing(group_nb) + isnothing(ranges)) == 0
+        throw(ArgumentError("Need to provide `group_size`, `group_nb` or `ranges`"))
+    elseif (!isnothing(group_size) + !isnothing(group_nb) + !isnothing(ranges)) > 1
+        throw(ArgumentError("Cannot handle combinations of `group_size`, `group_nb` or `ranges`. Choose only one keyword"))
+    elseif isnothing(ranges)
+        datasize = size(data,2)
+        ranges = get_ranges(;group_size, group_nb, datasize)
+    end
+
     idx_ranges = (1:length(ranges),) # idx of batches
+
+    isnothing(batchsizes) && (batchsizes = fill(length(ranges),length(epochs)))
 
     @assert (length(optimizers) == length(epochs) == length(batchsizes)) "`optimizers`, `epochs`, `batchsizes` must be of same length"
     @assert (size(data,1) == dim_prob) "The dimension of the training data does not correspond to the dimension of the state variables. This probably means that the training data corresponds to observables different from the state variables. In this case, you need to provide manually `u0s_init`." 
@@ -386,7 +388,7 @@ function iterative_inference(infprob;group_sizes = nothing,
         println("***************\nIterative training with $(length(ranges)) segment(s)\n***************")
 
         u0s_init = _initialise_u0s_iterative_piecewise_ML(res.pred,res.ranges,ranges)
-        tempres = _inference(infprob;
+        tempres = inference(infprob;
                                 ranges = ranges, 
                                 optimizers = optimizers_array[i],
                                 u0s_init = u0s_init,

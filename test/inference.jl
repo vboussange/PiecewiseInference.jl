@@ -55,6 +55,22 @@ batchsizes = [group_nb]
     @test all(isapprox.(res.u0s_trained[1], u0, atol = 1e-3))
 end
 
+@testset "piecewise inference, multithreading" begin
+    res = inference(infprob;
+                        group_nb = group_nb, 
+                        data = ode_data, 
+                        tsteps = tsteps, 
+                        epochs = epochs, 
+                        optimizers = optimizers,
+                        batchsizes = batchsizes,
+                        multi_threading=true
+                        )
+    p_trained = get_p_trained(res)
+    @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-3))
+    @test length(res.losses) == sum(epochs) + 1
+    @test all(isapprox.(res.u0s_trained[1], u0, atol = 1e-3))
+end
+
 batchsizes = [1]
 @testset "piecewise inference, SGD" begin
     res = inference(infprob;
