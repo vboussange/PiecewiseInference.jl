@@ -27,7 +27,9 @@ That's it! This will download the latest version of **PiecewiseInference.jl** fr
 
 
 ## Getting started
-See the documentation and the `test` folder for up-to-date examples.
+
+Check out [this blog post](https://vboussange.github.io/post/piecewiseinference/) providing a hands-on tutorial.
+See also the documentation and the `test` folder.
 
 ## Related packages
 `DiffEqFlux` is a package with similar goals as `PiecewiseInference`, and proposes the method `DiffEqFlux.multiple_shooting`, which is close to `PiecewiseInference.inference` but where initial conditions are not inferred. `PiecewiseInference` further proposes several utility methods for model selection.
