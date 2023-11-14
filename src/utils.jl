@@ -217,7 +217,7 @@ end
 
 function to_optim_space(p::ComponentArray, infprob::InferenceProblem)
     @unpack p0, p_bij = infprob
-    pairs = [reshape(p_bij[k](p[k]),:) for k in keys(p0)]
+    pairs = [reshape(p_bij[k](getproperty(p,k)),:) for k in keys(p0)]
     ax = getaxes(p0)
     return ComponentArray(vcat(pairs...), ax)
 end
@@ -225,7 +225,7 @@ end
 # TODO /!\ order is not guaranteed!
 function to_param_space(θ::ComponentArray, infprob::InferenceProblem)
     @unpack p0, p_bij = infprob
-    pairs = [reshape(inverse(p_bij[k])(θ[k]),:) for k in keys(p0)]
+    pairs = [reshape(inverse(p_bij[k])(getproperty(θ,k)),:) for k in keys(p0)]
     ax = getaxes(p0)
     return ComponentArray(vcat(pairs...), ax)
 end

@@ -91,13 +91,12 @@ through the optimizers `optimizers`. Returns a `InferenceResult`.
 - `optimizers` : array of optimizers, e.g. `[Adam(0.01)]`
 - `epochs` : A vector with number of epochs for each optimizer in `optimizers`.
 - `batchsizes`: An vector of batch sizes, which should match the length of
-  `optimizers`.
+  `optimizers`. If nothing is provided, all segments are used at once (full batch).
 - `verbose_loss` : Whether to display loss during training.
 - `info_per_its = 50`: The frequency at which to display the training
   information.
 - `plotting` :  Whether to plot the convergence loss during training.
-- `cb` :  A call back function. Must be of the form `cb(θs, p_trained, losses,
-  pred, ranges)`.
+- `cb` :  A call back function. Must be of the form `cb(p_trained, losses, pred, ranges)`.
 - `threshold` : The tolerance for stopping training.
 - `save_pred = true`: Whether to save the predictions.
 - `save_losses = true` : Whether to save the losses.
