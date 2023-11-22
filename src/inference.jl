@@ -206,7 +206,7 @@ function inference(infprob;
     isnothing(batchsizes) && (batchsizes = fill(length(ranges),length(epochs)))
 
     @assert (length(optimizers) == length(epochs) == length(batchsizes)) "`optimizers`, `epochs`, `batchsizes` must be of same length"
-    @assert ((size(data,1) == dim_prob) && isnothing(u0s_init)) "The dimension of the training data does not correspond to the dimension of the state variables. This probably means that the training data corresponds to observables different from the state variables. In this case, you need to provide manually `u0s_init`." 
+    @assert ((size(data,1) == dim_prob) || !isnothing(u0s_init)) "The dimension of the training data does not correspond to the dimension of the state variables. This probably means that the training data corresponds to observables different from the state variables. In this case, you need to provide manually `u0s_init`." 
     for (i,opt) in enumerate(optimizers)
         OPT = typeof(opt)
         if OPT <: Union{Optim.AbstractOptimizer, Optim.Fminbox, Optim.SAMIN, Optim.ConstrainedOptimizer}
