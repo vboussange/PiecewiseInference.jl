@@ -6,7 +6,7 @@
 
 Suite for inverse modelling of dynamical systems characterised by complex dynamics. 
 
-**PiecewiseInference.jl** implements a **segmentation method** that improves the convergence of local search methods by regularizing the inference problem.
+**PiecewiseInference.jl** is designed to enhance the convergence of time series-based parameter inversion methods. It achieves this by implementing a segmentation method and parameter normalization, which regularize the inference problem, together with minibatching.
 
 ![](docs/animated.gif)
 
