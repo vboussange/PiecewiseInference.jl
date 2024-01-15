@@ -4,8 +4,6 @@
 [![Build status (Github Actions)](https://github.com/vboussange/PiecewiseInference.jl/workflows/CI/badge.svg)](https://github.com/vboussange/PiecewiseInference.jl/actions)
 [![codecov.io](http://codecov.io/github/vboussange/PiecewiseInference.jl/coverage.svg?branch=main)](http://codecov.io/github/vboussange/PiecewiseInference.jl?branch=main)
 
-Inverse modelling framework for dynamical systems characterised by complex dynamics. 
-
 **PiecewiseInference.jl** is designed to enhance the convergence of time series-based parameter inversion methods. It achieves this by implementing a **segmentation method** and **parameter normalization**, which regularize the inference problem, together with **minibatching**.
 
 ![](docs/animated.gif)
