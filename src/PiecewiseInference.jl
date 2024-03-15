@@ -1,4 +1,4 @@
-__precompile__(false)
+__precompile__()
 """
 $(DocStringExtensions.README)
 """
@@ -52,5 +52,6 @@ module PiecewiseInference
     export piecewise_loss
     export inference, piecewise_ML_indep_TS, iterative_inference, get_ranges
     export plot_convergence
-    export FIM_strouwen, FIM_yazdani, loglikelihood, estimate_σ, RSS, R2, pretty_print, loss_param_prior_from_dict, get_evidence
+    export FIM_strouwen, FIM_yazdani, loglikelihood, estimate_σ, RSS, R2, pretty_print, loss_param_prior_from_dict, get_evidence,
+            loglikelihood_lognormal
 end # module

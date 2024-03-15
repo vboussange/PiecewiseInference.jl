@@ -221,7 +221,7 @@ function inference(infprob;
         u0s_init = _init_u0s(data, ranges)
     end
     # build θ, which is the parameter vector containing u0s, in the parameter space
-    θ = _build_θ(get_p(infprob), u0s_init, infprob)
+    θ = _build_θ(p0, u0s_init, infprob)
 
     # piecewise loss
     function _loss(θ, idx_rngs)

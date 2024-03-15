@@ -26,6 +26,43 @@ function RSS(res::InferenceResult, data_set::Array, noisedistrib::T) where T <: 
     return rss
 end
 
+"""
+$(SIGNATURES)
+
+calculates the log-likelihood of `data` under the assumption that it follows a Log-Normal distribution. 
+The Log-Normal parameters are derived from `preds`, which represents predicted values, and `σ`, which is the standard deviation.
+
+# Arguments
+- `preds::Array`: A 2D array of predicted values.
+- `data::Array`: A 2D array of observed data, corresponding to the predictions.
+- `σ::Number`: The standard deviation of the Log-Normal distribution, which variance-covariance matrix is assumed as `σ^2 I`
+
+# Returns
+- `Number`: The log-likelihood of the data.
+
+# Notes
+- The function only computes log-likelihood for elements where both predicted and observed data are positive.
+
+# Example
+```julia
+preds = [1.0 2.0; 3.0 4.0]
+data = [1.1 1.9; 2.9 4.1]
+σ = [0.5, 0.5]
+log_likelihood = loglikelihood_lognormal(preds, data, σ)
+"""
+function loglikelihood_lognormal(preds::Array, data::Array, σ::Number)
+    l = 0.
+    for i in 1:size(preds,2)
+        for j in 1:size(preds,1)
+            if preds[j,i] > 0. && data[j,i] > 0.
+                l += logpdf(LogNormal(log.(preds[j,i]), σ), data[j,i])
+            end
+        end
+    end
+    return l
+    # NOTE: pdf(MvNormal(zeros(2), σ^2 * diagm(ones(2))), [0.,0.]) ≈ pdf(Normal(0.,σ),0.)^2
+end
+
 # """
 # $(SIGNATURES)
 
