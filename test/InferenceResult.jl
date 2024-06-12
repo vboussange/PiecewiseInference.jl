@@ -1,5 +1,5 @@
 using PiecewiseInference
-using LinearAlgebra, ParametricModels, OrdinaryDiffEq, SciMLSensitivity
+using LinearAlgebra, OrdinaryDiffEq, SciMLSensitivity
 using ComponentArrays
 using UnPack
 using OptimizationOptimisers, OptimizationOptimJL

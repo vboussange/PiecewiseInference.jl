@@ -2,7 +2,6 @@
 Benchmarking threads vs non threads
 =#
 using PiecewiseInference
-using ParametricModels
 using SciMLSensitivity
 using OrdinaryDiffEq
 using ComponentArrays

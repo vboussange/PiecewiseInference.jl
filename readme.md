@@ -4,21 +4,21 @@
 [![Build status (Github Actions)](https://github.com/vboussange/PiecewiseInference.jl/workflows/CI/badge.svg)](https://github.com/vboussange/PiecewiseInference.jl/actions)
 [![codecov.io](http://codecov.io/github/vboussange/PiecewiseInference.jl/coverage.svg?branch=main)](http://codecov.io/github/vboussange/PiecewiseInference.jl?branch=main)
 
-**PiecewiseInference.jl** is designed to enhance the convergence of time series-based parameter inversion methods. It achieves this by implementing a **segmentation method** and **parameter normalization**, which regularize the inference problem, together with **minibatching**.
+**PiecewiseInference.jl** is a library to enhance the convergence of dynamical model parameter inversion methods. It provides features such as
+- a segmentation strategy, 
+- the independent estimation of initial conditions for each segment, 
+- parameter transformation, 
+- parameter and initial conditions regularization
+- mini-batching
+
+Taken altogether, these features regularize the inference problem and permit to solve it efficiently.
 
 ![](docs/animated.gif)
 
 ## Installation
-PiecewiseInference.jl has [ParametricModels.jl](https://github.com/vboussange/ParametricModels.jl) in its dependency, a non-registered package. As such, to install PiecewiseInference.jl, you'll need to first add an extra registry to your Julia installation that tracks both ParametricModels.jl and PiecewiseInference.jl.
-
-To proceed, open Julia and type the following
+Open Julia REPL and type
 ```julia
-using Pkg
-pkg"registry add https://github.com/vboussange/VBoussangeRegistry.git"
-```
-Then go on and 
-```julia
-pkg"add PiecewiseInference"
+using Pkg; Pkg.add(url="https://github.com/vboussange/PiecewiseInference.jl")
 ```
 
 That's it! This will download the latest version of **PiecewiseInference.jl** from this git repo and download all dependencies.
@@ -27,10 +27,10 @@ That's it! This will download the latest version of **PiecewiseInference.jl** fr
 ## Getting started
 
 Check out [this blog post](https://vboussange.github.io/post/piecewiseinference/) providing a hands-on tutorial.
-See also the documentation and the `test` folder.
+See also the API documentation and the `test` folder.
 
 ## Related packages
 `DiffEqFlux` is a package with similar goals as `PiecewiseInference`, and proposes the method `DiffEqFlux.multiple_shooting`, which is close to `PiecewiseInference.inference` but where initial conditions are not inferred. `PiecewiseInference` further proposes several utility methods for model selection.
 
 ## Reference
-- Boussange, V., Vilimelis-Aceituno, P., Pellissier, L., _Mini-batching ecological data to improve ecosystem models with machine learning_ [[bioRxiv](https://www.biorxiv.org/content/10.1101/2022.07.25.501365v1)] (2022), 46 pages.
+Boussange, V., Vilimelis-Aceituno, P., Schäfer, F., Pellissier, L., _Partitioning time series to improve process-based models with machine learning_. [[bioRxiv]](https://www.biorxiv.org/content/10.1101/2022.07.25.501365v2) (2024), 46 pages.

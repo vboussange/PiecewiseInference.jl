@@ -1,4 +1,4 @@
-using LinearAlgebra, ParametricModels, OrdinaryDiffEq, SciMLSensitivity
+using LinearAlgebra, OrdinaryDiffEq, SciMLSensitivity
 using UnPack
 using OptimizationOptimisers, OptimizationFlux, OptimizationOptimJL
 using Test

@@ -89,7 +89,7 @@ $(SIGNATURES) performs piecewise inference for a given `InferenceProblem` and
   segment. If not provided, initial guesses are initialized from the `data`.
 - `optimizers` : array of optimizers, e.g. `[Adam(0.01)]`
 - `epochs` : A vector with number of epochs for each optimizer in `optimizers`.
-- `batchsizes`: An vector of batch sizes, which should match the length of
+- `batchsizes`: A vector of batch sizes, which should match the length of
   `optimizers`. If nothing is provided, all segments are used at once (full
   batch).
 - `verbose_loss` : Whether to display loss during training.
@@ -115,7 +115,6 @@ using SciMLSensitivity # provides diffential equation sensitivity methods
 using UnPack # provides the utility macro @unpack 
 using OptimizationOptimisers, OptimizationFlux # provide the optimizers
 using LinearAlgebra
-using ParametricModels
 using PiecewiseInference
 using OrdinaryDiffEq
 using Distributions, Bijectors # used to constrain parameters and initial conditions
@@ -139,7 +138,7 @@ mp = ModelParams(;p = p_true,
                 saveat = tsteps, 
                 )
 model = MyModel(mp)
-sol_data = ParametricModels.simulate(model)
+sol_data = simulate(model)
 ode_data = Array(sol_data)
 # adding some normally distributed noise
 σ_noise = 0.1
@@ -221,6 +220,7 @@ function inference(infprob;
         u0s_init = _init_u0s(data, ranges)
     end
     # build θ, which is the parameter vector containing u0s, in the parameter space
+
     θ = _build_θ(p0, u0s_init, infprob)
 
     # piecewise loss
@@ -239,10 +239,10 @@ function inference(infprob;
     println("inference with $(length(tsteps)) points and $nb_group groups.")
 
     # Here we need a default behavior for Optimization.jl (see https://github.com/SciML/Optimization.jl/blob/c0a51120c7c54a89d091b599df30eb40c4c0952b/lib/OptimizationFlux/src/OptimizationFlux.jl#L53)
-    callback(θ, l, pred=[]) = begin
+    callback(state, l, pred=[]) = begin
         push!(losses, l)
-        p_trained = to_param_space(θ, infprob)
-
+        p_trained = to_param_space(state.u, infprob)
+        # TODO: this is called at every parameter update, it would be nice to have it at every epoch
         if length(losses)%info_per_its==0
             verbose_loss && (println("Loss after $(length(losses)) iterations: $(losses[end])"))
         end

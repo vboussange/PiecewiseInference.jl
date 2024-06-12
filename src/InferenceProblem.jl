@@ -1,5 +1,5 @@
 Base.@kwdef struct InferenceProblem{M <: AbstractModel,P,PP,U0P,LL,PB,UB}
-    m::M # model inheriting ParametricModels.AbstractModel
+    m::M # model inheriting AbstractModel
     p0::P # parameter ComponentArray
     loss_param_prior::PP # loss used to directly constrain parameters
     loss_u0_prior::U0P # loss used to directly constrain ICs
@@ -65,14 +65,12 @@ function InferenceProblem(model::M,
                     u0_bij)
 end
 
-import ParametricModels: get_p, get_mp, get_tspan
 get_p(prob::InferenceProblem) = prob.p0
 get_p_bijector(prob::InferenceProblem) =prob.p_bij
 get_u0_bijector(prob::InferenceProblem) = prob.u0_bij
 get_tspan(prob::InferenceProblem) = get_tspan(prob.m)
 get_model(prob::InferenceProblem) = prob.m
 get_mp(prob::InferenceProblem) = get_mp(get_model(prob))
-import ParametricModels.get_dims
 get_dims(prob::InferenceProblem) = get_dims(get_model(prob))
 get_loss_likelihood(prob::InferenceProblem) = prob.loss_likelihood
 get_loss_param_prior(prob::InferenceProblem) = prob.loss_param_prior

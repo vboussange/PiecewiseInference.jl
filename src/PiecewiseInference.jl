@@ -3,7 +3,6 @@ __precompile__()
 $(DocStringExtensions.README)
 """
 module PiecewiseInference
-    using ParametricModels
     using OrdinaryDiffEq
     using Optimization
     using OptimizationOptimJL:Optim
@@ -18,7 +17,6 @@ module PiecewiseInference
     using Distributions
     import Distributions:loglikelihood #overwritten
 
-    using ParametricModels
     using Optimisers, Flux
     using IterTools: ncycle 
     using Bijectors
@@ -31,6 +29,7 @@ module PiecewiseInference
     import Base.length
     length(::ParamFun{N}) where N = N
 
+    include("models.jl")
     include("InferenceProblem.jl")
     include("InferenceResult.jl")
     include("utils.jl")
@@ -46,6 +45,8 @@ module PiecewiseInference
         @require PyPlot="d330b81b-6aea-500a-939a-2ce795aea3ee" include("plot_convergence.jl")
     end
 
+    export AbstractModel, ComposableModel, simulate, ModelParams, @model, name, remake
+    export get_p, get_u0, get_alg, get_tspan, get_kwargs, get_mp, get_dims, get_prob
     export InferenceProblem, get_p, get_p_bijector, get_u0_bijector, get_re, get_tspan, get_model, get_mp
     export ParamFun, InferenceResult, get_p_trained, forecast
     export group_ranges, AIC, AICc, AICc_TREE, moments!, moments, divisors
