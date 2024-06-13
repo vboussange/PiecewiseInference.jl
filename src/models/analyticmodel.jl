@@ -1,6 +1,6 @@
 
 abstract type AbstractAnalyticModel <: AbstractModel end
-import ParametricModels:simulate
+
 function simulate(m::AbstractAnalyticModel; tspan = nothing, u0 = nothing, saveat=nothing, p = nothing, kwargs...)
     isnothing(u0) && (u0 = get_u0(m))
     isnothing(tspan) && (tspan = get_tspan(m))
@@ -14,7 +14,8 @@ function simulate(m::AbstractAnalyticModel; tspan = nothing, u0 = nothing, savea
         p = merge(p0, p)
     end
 
-    sim = m.(Ref(u0), Ref(p), saveat)
+    t0 = saveat[1]
+    sim = m.(Ref(u0), Ref(t0), Ref(p), saveat)
     
     return hcat(sim...)
 end

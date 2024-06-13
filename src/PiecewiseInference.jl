@@ -46,7 +46,7 @@ module PiecewiseInference
         @require PyPlot="d330b81b-6aea-500a-939a-2ce795aea3ee" include("plot_convergence.jl")
     end
 
-    export AbstractModel, ComposableModel, simulate, ModelParams, @model, name, remake
+    export simulate, ModelParams, @AnalyticModel, @ODEModel, name, remake
     export get_p, get_u0, get_alg, get_tspan, get_kwargs, get_mp, get_dims, get_prob
     export InferenceProblem, get_p, get_p_bijector, get_u0_bijector, get_re, get_tspan, get_model, get_mp
     export ParamFun, InferenceResult, get_p_trained, forecast

@@ -1,7 +1,8 @@
 using OrdinaryDiffEq, Test, UnPack
 using Bijectors
 using Random; Random.seed!(2)
-using Optimisers, Distributions
+using OptimizationOptimisers
+using Distributions
 using ComponentArrays
 using PiecewiseInference
 
