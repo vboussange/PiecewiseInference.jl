@@ -7,7 +7,7 @@ using Bijectors
 import PiecewiseInference:loss_param_prior
 using ComponentArrays
 
-@model MyModel
+@ODEModel MyModel
 function (m::MyModel)(du, u, p, t)
     @unpack b = p
     du .=  0.1 .* u .* ( 1. .- b .* u) 

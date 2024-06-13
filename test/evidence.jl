@@ -11,7 +11,7 @@ using ComponentArrays
 σ_noise = 0.1
 group_size = 10
 
-@model MyModel
+@ODEModel MyModel
 function (m::MyModel)(du, u, p, t)
     @unpack b = p
     du .=  0.1 .* u .* ( 1. .- b .* u) 

@@ -3,7 +3,7 @@ using LinearAlgebra
 using Distributions, DataFrames
 using Bijectors, Optimisers
 
-@model MyModel
+@ODEModel MyModel
 function (m::MyModel)(du, u, p, t)
     @unpack r, b = p
     du .=  r .* u .* ( 1. .- b .* u) 

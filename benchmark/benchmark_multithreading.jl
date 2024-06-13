@@ -9,7 +9,7 @@ using Bijectors
 using UnPack
 using OptimizationOptimisers, OptimizationFlux, OptimizationOptimJL
 
-@model MyModel
+@ODEModel MyModel
 function (m::MyModel)(du, u, p, t)
     @unpack b = p
     du .=  0.1 .* u .* ( 1. .- b .* u) 
