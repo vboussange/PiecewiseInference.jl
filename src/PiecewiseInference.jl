@@ -31,6 +31,7 @@ module PiecewiseInference
     include("models/models.jl")
     include("models/odemodel.jl")
     include("models/analyticmodel.jl")
+    include("models/armodel.jl")
     include("InferenceProblem.jl")
     include("InferenceResult.jl")
     include("utils.jl")
@@ -46,7 +47,7 @@ module PiecewiseInference
         @require PyPlot="d330b81b-6aea-500a-939a-2ce795aea3ee" include("plot_convergence.jl")
     end
 
-    export simulate, ModelParams, @AnalyticModel, @ODEModel, name, remake
+    export simulate, ModelParams, @AnalyticModel, @ODEModel, @ARModel, name, remake
     export get_p, get_u0, get_alg, get_tspan, get_kwargs, get_mp, get_dims, get_prob
     export InferenceProblem, get_p, get_p_bijector, get_u0_bijector, get_re, get_tspan, get_model, get_mp
     export ParamFun, InferenceResult, get_p_trained, forecast
