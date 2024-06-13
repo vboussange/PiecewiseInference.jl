@@ -28,8 +28,9 @@ module PiecewiseInference
     abstract type ParamFun{N} end
     import Base.length
     length(::ParamFun{N}) where N = N
-
-    include("models.jl")
+    include("models/models.jl")
+    include("models/odemodel.jl")
+    include("models/analyticmodel.jl")
     include("InferenceProblem.jl")
     include("InferenceResult.jl")
     include("utils.jl")

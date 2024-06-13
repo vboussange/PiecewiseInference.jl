@@ -51,40 +51,6 @@ abstract type AbstractModel end
 name(m::AbstractModel) = string(nameof(typeof(m)))
 Base.show(io::IO, cm::AbstractModel) = println(io, "`Model` ", name(cm))
 
-"""
-$(SIGNATURES)
-
-Returns the `ODEProblem` associated with to `m`.
-"""
-function get_prob(m::AbstractModel, u0, tspan, p)
-    prob = ODEProblem(m, u0, tspan, p)
-    return prob
-end
-
-"""
-$(SIGNATURES)
-
-Simulate model `m` and returns an `ODESolution`.  
-When provided, keyword arguments overwrite default solving options 
-in m.
-"""
-function simulate(m::AbstractModel; u0 = nothing, tspan=nothing, p = nothing, alg = nothing, kwargs...)
-    isnothing(u0) ? u0 = get_u0(m) : nothing
-    isnothing(tspan) ? tspan = get_tspan(m) : nothing
-    if isnothing(p) 
-        p = get_p(m) 
-    else
-        # p can be a sub tuple of the full parameter tuple
-        p0 = get_p(m)
-        p = merge(p0, p)
-    end
-    isnothing(alg) ? alg = get_alg(m) : nothing
-    prob = get_prob(m, u0, tspan, p)
-    # kwargs erases get_kwargs(m)
-    sol = solve(prob, alg; get_kwargs(m)..., kwargs...)
-    return sol
-end
-
 struct ModelParams{P,T,U0,A,K}
     p::P # model parameters; we require dictionary or named tuples or componentarrays
     tspan::T # time span
@@ -165,18 +131,4 @@ Returns the dimension of the state variable
 """
 get_dims(m::AbstractModel) = length(get_u0(m))
 
-"""
-$SIGNATURES
 
-Generates the skeleton of the model, a `struct` containing details of the numerical implementation.
-"""
-macro model(name) 
-    expr = quote
-        struct $name{MP<:ModelParams} <: AbstractModel
-            mp::MP
-        end
-
-        $(esc(name))(;mp) = $(esc(name))(mp)
-    end
-    return expr
-end
