@@ -1,6 +1,11 @@
 
 abstract type AbstractARModel <: AbstractModel end
 
+"""
+$SIGNATURES
+
+- TODO: as of current implementation, all parameters must be contained in `p` if `p` is provided. This comes from a bug with the `merge` function. It must be fixed. 
+"""
 function simulate(m::AbstractARModel; u0 = nothing, saveat=nothing, p = nothing, kwargs...)
     isnothing(u0) && (u0 = get_u0(m))
     isnothing(saveat) && (saveat = m.mp.kwargs[:saveat])
@@ -26,7 +31,32 @@ end
 """
 $SIGNATURES
 
-Generates the skeleton of the model, a `struct` containing details of the numerical implementation.
+Creates an auto-regressive model, with signature `model(p, t)`.
+Under the hood, generate a `struct` containing details of the numerical implementation.
+
+# Example
+
+```julia
+@ARModel LogisticMap
+
+
+# model definition
+function (m::LogisticMap)(u, p)
+    T = eltype(u)
+    return p.r .* u .* (one(T) .- u)
+end
+
+tspan = (0, 100)
+tsteps = 0:1:100
+
+p = ComponentArray(r = [3.2])
+u0 = [0.5]
+model = LogisticMap(ModelParams(;p,
+                                u0,
+                                saveat = tsteps
+                                ))
+sol = simulate(model; u0, p)
+```
 """
 macro ARModel(name) 
     expr = quote

@@ -21,10 +21,7 @@ using PiecewiseInference
     @test PiecewiseInference.remake(mp; p = p) isa ModelParams
 end
 
-struct Modelα <: AbstractModel
-    mp::ModelParams
-end
-
+@ODEModel Modelα
 function (m::Modelα)(du, u, p, t)
     T = eltype(u)
     N = get_dims(m)

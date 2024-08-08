@@ -32,27 +32,31 @@ tsteps = range(tspan[1], tspan[end], length=100)
 end
 
 
-p_true = ComponentArray(r = [0.5], b = [0.23])
-p_init= ComponentArray(r = [0.2], b = [1.])
+@testset "Piecewise inference with `AnalyticModel`" begin
 
-model = LogisticModel(ModelParams(;p=p_true,
-                                    tspan,
-                                    u0,
-                                    saveat = tsteps
-                                    ))
+    p_true = ComponentArray(r = [0.5], b = [0.23])
+    p_init= ComponentArray(r = [0.2], b = [1.])
 
-sol_data = simulate(model)
-ode_data = Array(sol_data)
+    u0 = rand(1)
+    model = LogisticModel(ModelParams(;p=p_true,
+                                        tspan,
+                                        u0,
+                                        saveat = tsteps
+                                        ))
 
-p_bij = (b = bijector(Uniform(1e-3, 5e0)), r = bijector(Uniform(1e-3, 5e0)))
-u0_bij = bijector(Uniform(1e-3,5.))
+    sol_data = simulate(model)
+    ode_data = Array(sol_data)
 
-infprob = InferenceProblem(model, p_init; p_bij, u0_bij)
-optimizers = [ADAM(0.01)]
-epochs = [4000]
-group_nb = 2
-batchsizes = [group_nb]
-@testset "piecewise inference" begin
+    p_bij = (b = bijector(Uniform(1e-3, 5e0)), 
+            r = bijector(Uniform(1e-3, 5e0)))
+    u0_bij = bijector(Uniform(1e-3,5.))
+
+    infprob = InferenceProblem(model, p_init; p_bij, u0_bij)
+    optimizers = [ADAM(0.01)]
+    epochs = [4000]
+    group_nb = 2
+    batchsizes = [group_nb]
+
     res = inference(infprob;
                         group_nb = group_nb, 
                         data = ode_data, 
