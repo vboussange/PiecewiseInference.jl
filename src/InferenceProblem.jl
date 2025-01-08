@@ -54,7 +54,7 @@ function InferenceProblem(model::M,
         p_bij = NamedTuple(p_bij)
     end
 
-    @assert length(p_bij) == length(keys(p0)) "Each element of `p_dist` should correspond to an entry of `p0`"
+    @assert length(p_bij) == length(keys(p0)) "Each element of `p_bij` should correspond to an entry of `p0`"
 
     InferenceProblem(model,
                     p0,
