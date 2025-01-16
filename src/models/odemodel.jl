@@ -26,9 +26,7 @@ function simulate(m::AbstractODEModel; u0 = nothing, tspan=nothing, p = nothing,
     # we may want to have `p = merge(p0, p)`, but `merge` only works for non-nested component arrays
     # use cases are e.g. when wants to only train a subset of the model parameters
     # but non trainable parameters could be stored using the model structure
-    if isnothing(p) 
-        p = get_p(m) 
-    end
+    isnothing(p) ? p = get_p(m) : nothing
     # else
     #     # p can be a sub tuple of the full parameter tuple
     #     p0 = get_p(m)
@@ -49,7 +47,7 @@ Generates the skeleton of the model, a `struct` containing details of the numeri
 """
 macro ODEModel(name) 
     expr = quote
-        struct $name{MP<:ModelParams} <: AbstractModel
+        struct $name{MP<:ModelParams} <: AbstractODEModel
             mp::MP
         end
 

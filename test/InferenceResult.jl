@@ -45,7 +45,6 @@ infprob = InferenceProblem(model, p_init; p_bij, u0_bij)
                         Inf,
                         p_init, 
                         [u0],
-                        [ode_data], 
                         [1:length(tsteps)],
                         [ode_data])
     p_res = get_p_trained(res)

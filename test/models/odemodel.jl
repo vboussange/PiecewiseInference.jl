@@ -45,7 +45,7 @@ tsteps = range(tspan[1], tspan[end], length=10)
                                     alg=BS3()
                                     ))
     sol = simulate(dudt_log; u0, p)
-    @test sol.retcode == :Success
+    @test sol.retcode == ReturnCode.Success
 end
 
 @testset "testing `simulate` with `NamedTuple`s" begin
@@ -57,7 +57,7 @@ end
                                     alg=BS3()
                                     ))
     sol = simulate(dudt_log; u0, p)
-    @test sol.retcode == :Success
+    @test sol.retcode == ReturnCode.Success
 end
 
 @testset "testing `simulate` with kwargs" begin
@@ -72,38 +72,39 @@ end
                                     abstol=1e-6
                                     ))
     sol = simulate(dudt_log; u0, p)
-    @test sol.retcode == :Success
+    @test sol.retcode == ReturnCode.Success
     @test size(Array(sol),2) == length(tsteps)
 end
 
-@testset "testing `simulate` with `p` a subset of model params" begin
-    p = (r = rand(N), b = rand(N), α = rand(1))
-    u0 = rand(N)
-    tsteps = tspan[1]:0.1:tspan[2]
-    dudt_log = Modelα(ModelParams(;p,
-                                    tspan,
-                                    u0,
-                                    alg=BS3(),
-                                    saveat = tsteps,
-                                    abstol=1e-6
-                                    ))
-    sol = simulate(dudt_log; u0, p = (r = rand(N),))
-    @test sol.retcode == :Success
-    @test size(Array(sol),2) == length(tsteps)
-end
+# DEPRECATED
+# @testset "testing `simulate` with `p` a subset of model params" begin
+#     p = (r = rand(N), b = rand(N), α = rand(1))
+#     u0 = rand(N)
+#     tsteps = tspan[1]:0.1:tspan[2]
+#     dudt_log = Modelα(ModelParams(;p,
+#                                     tspan,
+#                                     u0,
+#                                     alg=BS3(),
+#                                     saveat = tsteps,
+#                                     abstol=1e-6
+#                                     ))
+#     sol = simulate(dudt_log; u0, p = (r = rand(N),))
+#     @test sol.retcode == :Success
+#     @test size(Array(sol),2) == length(tsteps)
+# end
 
-@testset "testing `simulate` with `p::ComponentArray` a subset of model params" begin
-    p = ComponentArray(r = rand(N), b = rand(N), α = rand(1))
-    u0 = rand(N)
-    tsteps = tspan[1]:0.1:tspan[2]
-    dudt_log = Modelα(ModelParams(;p,
-                                    tspan,
-                                    u0,
-                                    alg=BS3(),
-                                    saveat = tsteps,
-                                    abstol=1e-6
-                                    ))
-    sol = simulate(dudt_log; u0, p = ComponentArray(r = rand(N),))
-    @test sol.retcode == :Success
-    @test size(Array(sol),2) == length(tsteps)
-end
+# @testset "testing `simulate` with `p::ComponentArray` a subset of model params" begin
+#     p = ComponentArray(r = rand(N), b = rand(N), α = rand(1))
+#     u0 = rand(N)
+#     tsteps = tspan[1]:0.1:tspan[2]
+#     dudt_log = Modelα(ModelParams(;p,
+#                                     tspan,
+#                                     u0,
+#                                     alg=BS3(),
+#                                     saveat = tsteps,
+#                                     abstol=1e-6
+#                                     ))
+#     sol = simulate(dudt_log; u0, p = ComponentArray(r = rand(N),))
+#     @test sol.retcode == :Success
+#     @test size(Array(sol),2) == length(tsteps)
+# end

@@ -7,7 +7,7 @@ using OrdinaryDiffEq
 using ComponentArrays
 using Bijectors
 using UnPack
-using OptimizationOptimisers, OptimizationFlux, OptimizationOptimJL
+using OptimizationOptimisers, OptimizationOptimJL
 
 @ODEModel MyModel
 function (m::MyModel)(du, u, p, t)
@@ -37,7 +37,7 @@ sol_data = simulate(model)
 ode_data = Array(sol_data)
 
 infprob = InferenceProblem(model, p_init; p_bij, u0_bij)
-optimizers = [ADAM(0.001)]
+optimizers = [OptimizationOptimisers.Adam(0.001)]
 epochs = [4000]
 group_nb = 2
 batchsizes = [group_nb]

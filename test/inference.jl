@@ -1,10 +1,10 @@
 using LinearAlgebra, OrdinaryDiffEq, SciMLSensitivity
+using ForwardDiff
 using UnPack
-using OptimizationOptimisers, OptimizationFlux, OptimizationOptimJL
+using Optimization, OptimizationOptimisers, OptimizationOptimJL
 using Test
 using PiecewiseInference
 using Bijectors
-import PiecewiseInference:loss_param_prior
 using ComponentArrays
 
 @ODEModel MyModel
@@ -35,7 +35,7 @@ sol_data = simulate(model)
 ode_data = Array(sol_data)
 
 infprob = InferenceProblem(model, p_init; p_bij, u0_bij)
-optimizers = [ADAM(0.001)]
+optimizers = [OptimizationOptimisers.Adam(0.001)]
 epochs = [4000]
 group_nb = 2
 batchsizes = [group_nb]
@@ -51,7 +51,7 @@ batchsizes = [group_nb]
                         )
     p_trained = get_p_trained(res)
     @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-3))
-    @test length(res.losses) == sum(epochs) + 1
+    @test length(res.losses) == sum(epochs)
     @test all(isapprox.(res.u0s_trained[1], u0, atol = 1e-3))
 end
 
@@ -67,7 +67,7 @@ end
                         )
     p_trained = get_p_trained(res)
     @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-3))
-    @test length(res.losses) == sum(epochs) + 1
+    @test length(res.losses) == sum(epochs)
     @test all(isapprox.(res.u0s_trained[1], u0, atol = 1e-3))
 end
 
@@ -83,7 +83,7 @@ batchsizes = [1]
                         )
     p_trained = get_p_trained(res)
     @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-3 ))
-    @test length(res.losses) == sum(epochs * group_nb) + 1
+    @test length(res.losses) == sum(epochs * group_nb)
 end
 
 group_nb = 3
@@ -99,7 +99,7 @@ batchsizes = [2]
                         )
     p_trained = get_p_trained(res)
     @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-3))
-    @test length(res.losses) == sum(epochs * 2) + 1
+    @test length(res.losses) == sum(epochs * 2)
 end
 
 @testset "inference 1 group" begin
@@ -113,7 +113,7 @@ end
                         )
     p_trained = get_p_trained(res)
     @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-1))
-    @test length(res.losses) == sum(epochs) + 1
+    @test length(res.losses) == sum(epochs)
 end
 
 @testset "inference 1 group, LBFGS" begin
@@ -129,7 +129,7 @@ end
                         )
     p_trained = get_p_trained(res)
     @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-1))
-    @test length(res.losses) <= sum(epochs) + 1
+    @test length(res.losses) <= sum(epochs)
 end
 
 @testset "inference 1 group, ADAM, then LBFGS" begin
@@ -146,7 +146,7 @@ end
                         )
     p_trained = get_p_trained(res)
     @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-1))
-    @test length(res.losses) <= sum(epochs) + 1
+    @test length(res.losses) <= sum(epochs)
 end
 
 @testset "piecewise inference independent TS" begin
@@ -173,42 +173,43 @@ end
                         )
     p_trained = get_p_trained(res)
     @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-1))
-    @test length(res.losses) == sum(epochs) + 1
+    @test length(res.losses) == sum(epochs)
 end
 
-@testset "Initialisation iterative piecewise ML" begin
-    group_size_init = 11
-    datasize = 100
-    ranges_init = get_ranges(;datasize, group_size = group_size_init)
-    group_size_2 = 21
-    ranges_2 = get_ranges(;datasize, group_size = group_size_2)
-    pred_init = [cumsum(ones(3, length(rng)), dims=2) for rng in ranges_init]
+# DEPRECATED
+# @testset "Initialisation iterative piecewise ML" begin
+#     group_size_init = 11
+#     datasize = 100
+#     ranges_init = get_ranges(;datasize, group_size = group_size_init)
+#     group_size_2 = 21
+#     ranges_2 = get_ranges(;datasize, group_size = group_size_2)
+#     pred_init = [cumsum(ones(3, length(rng)), dims=2) for rng in ranges_init]
 
-    u0_2 = PiecewiseInference._initialise_u0s_iterative_piecewise_ML(pred_init, ranges_init, ranges_2)
-    @test u0_2 isa Vector
-    @test all([all(u0_2_i .== 1.) for u0_2_i in u0_2])
-end
+#     u0_2 = PiecewiseInference._initialise_u0s_iterative_piecewise_ML(pred_init, ranges_init, ranges_2)
+#     @test u0_2 isa Vector
+#     @test all([all(u0_2_i .== 1.) for u0_2_i in u0_2])
+# end
 
-@testset "Iterative piecewise inference" begin
-    ode_data_wnoise = ode_data .+ randn(size(ode_data)) .* 0.1
-    group_size_init = 51
+# @testset "Iterative piecewise inference" begin
+#     ode_data_wnoise = ode_data .+ randn(size(ode_data)) .* 0.1
+#     group_size_init = 51
 
-    # defining group size and learning rates
-    datasize = length(tsteps)
-    div_data = divisors(datasize)
-    group_sizes = vcat(group_size_init, div_data[div_data .> group_size_init] .+ 1)
-    optimizers_array = [[ADAM(0.001)] for _ in 1:length(group_sizes)]
-    epochs = [5000]
-    res_array = iterative_inference(infprob,
-                                        group_sizes = group_sizes, 
-                                        optimizers_array = optimizers_array,
-                                        epochs = epochs,
-                                        data = ode_data_wnoise, 
-                                        tsteps = tsteps,)
-    p_trained = get_p_trained(res_array[end])
-    @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-1))
-    @test length(res_array[end].losses) == sum(epochs) + 1
-end
+#     # defining group size and learning rates
+#     datasize = length(tsteps)
+#     div_data = divisors(datasize)
+#     group_sizes = vcat(group_size_init, div_data[div_data .> group_size_init] .+ 1)
+#     optimizers_array = [[ADAM(0.001)] for _ in 1:length(group_sizes)]
+#     epochs = [5000]
+#     res_array = iterative_inference(infprob,
+#                                         group_sizes = group_sizes, 
+#                                         optimizers_array = optimizers_array,
+#                                         epochs = epochs,
+#                                         data = ode_data_wnoise, 
+#                                         tsteps = tsteps,)
+#     p_trained = get_p_trained(res_array[end])
+#     @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-1))
+#     @test length(res_array[end].losses) == sum(epochs) + 1
+# end
 
 
 @testset "piecewise inference, SGD, with priors" begin
@@ -229,7 +230,7 @@ end
                         )
     p_trained = get_p_trained(res)
     @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-3 ))
-    @test length(res.losses) == sum(epochs) + 1
+    @test length(res.losses) == sum(epochs)
 end
 
 @testset "piecewise inference, SGD, with priors, adtype = AutoZygote()" begin
@@ -274,5 +275,5 @@ end
                         )
     p_trained = get_p_trained(res)
     @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-3 ))
-    @test length(res.losses) == sum(epochs) + 1
+    @test length(res.losses) == sum(epochs)
 end

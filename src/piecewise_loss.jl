@@ -88,17 +88,12 @@ function piecewise_loss(infprob::InferenceProblem,
             loss += loss_likelihood(data, pred, tstep_i) # negative loglikelihood
             loss += loss_u0_prior(data[:,1], u0_i) # negative log u0 priors
 
-            # used for plotting, no need to differentiate
-            ChainRulesCore.ignore_derivatives() do
-                group_predictions[i] = pred
-            end
         end
     end
 
-    # adding priors
     loss += loss_param_prior(params) # negative log param priors
 
-    return loss, group_predictions
+    return loss
 end
 
 # projecting θ in optimization space to u0 for segment i in true parameter space

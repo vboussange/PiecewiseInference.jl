@@ -20,7 +20,7 @@ tsteps = range(tspan[1], tspan[end], length=100)
 
 
 @testset "testing `AnalyticModel`" begin
-    p = ComponentArray(r = rand(1), b = rand(1))
+    p = ComponentArray(r = [10.], b = [4.])
     u0 = rand(1)
     model = LogisticModel(ModelParams(;p,
                                     tspan,
@@ -68,6 +68,6 @@ end
                         )
     p_trained = get_p_trained(res)
     @test all(isapprox.(p_trained[:b], p_true[:b], atol = 1e-3))
-    @test length(res.losses) == sum(epochs) + 1
+    @test length(res.losses) == sum(epochs) 
     @test all(isapprox.(res.u0s_trained[1], u0, atol = 1e-3))
 end

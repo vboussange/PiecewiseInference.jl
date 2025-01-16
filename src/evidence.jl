@@ -25,24 +25,24 @@ function loglikelihood(data::Matrix, tsteps, infres::InferenceResult, p::Abstrac
     loglikelihood(data, tsteps, infres.infprob, p, infres.u0s_trained, infres.ranges)
 end
 
-"""
-$SIGNATURES
+# """
+# $SIGNATURES
 
-Provides evidence `p(M|data) = ∫p(data|M, θ) p(θ) p(M) dθ` for model `M` stored in `infprob` given the `data`, 
-using MAP estimate `p` and `u0s`. Here it is assumed that `p(M) = 1`.
+# Provides evidence `p(M|data) = ∫p(data|M, θ) p(θ) p(M) dθ` for model `M` stored in `infprob` given the `data`, 
+# using MAP estimate `p` and `u0s`. Here it is assumed that `p(M) = 1`.
 
-Relies on [Laplace's method](https://en.wikipedia.org/wiki/Laplace's_method)
+# Relies on [Laplace's method](https://en.wikipedia.org/wiki/Laplace's_method)
 
-# Note
-For now, we do not integrate over initial conditions `u0s`, but this may be considered.
-"""
-function get_evidence(data::Matrix, tsteps, infprob::InferenceProblem, p::ComponentArray, u0s::AbstractVector, ranges::AbstractVector)
-    ll(p) = loglikelihood(data, tsteps, infprob, p, u0s, ranges)
-    A = - ForwardDiff.hessian(ll, p)
-    ll_map = loglikelihood(data, tsteps, infprob, p, u0s, ranges)
-    return ll_map - log(det(A / (2π)))
-end
+# # Note
+# For now, we do not integrate over initial conditions `u0s`, but this may be considered.
+# """
+# function get_evidence(data::Matrix, tsteps, infprob::InferenceProblem, p::ComponentArray, u0s::AbstractVector, ranges::AbstractVector)
+#     ll(p) = loglikelihood(data, tsteps, infprob, p, u0s, ranges)
+#     A = - ForwardDiff.hessian(ll, p)
+#     ll_map = loglikelihood(data, tsteps, infprob, p, u0s, ranges)
+#     return ll_map - log(det(A / (2π)))
+# end
 
-function get_evidence(data::Matrix, tsteps, infres::InferenceResult)
-    get_evidence(data, tsteps, infres.infprob, infres.p_trained, infres.u0s_trained, infres.ranges)
-end
+# function get_evidence(data::Matrix, tsteps, infres::InferenceResult)
+#     get_evidence(data, tsteps, infres.infprob, infres.p_trained, infres.u0s_trained, infres.ranges)
+# end

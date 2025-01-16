@@ -19,7 +19,7 @@ tspan = (0, 100)
 tsteps = 0:1:100
 
 
-@testset "testing `AnalyticModel`" begin
+@testset "testing `ARModel`" begin
     p = ComponentArray(r = [3.2])
     u0 = [0.5]
     model = LogisticMap(ModelParams(;p,
@@ -27,6 +27,7 @@ tsteps = 0:1:100
                                     saveat = tsteps
                                     ))
     sol = simulate(model; u0, p)
+    @test sol isa Array
     # @test isapprox(sol[end], 1/p.b[], rtol=1e-3)
 end
 
@@ -51,7 +52,7 @@ optimizers = [ADAM(0.01)]
 epochs = [1000]
 group_nb = 2
 batchsizes = [group_nb]
-@testset "piecewise inference with `AnalyticModel" begin
+@testset "piecewise inference with `ARModel`" begin
     res = inference(infprob;
                         group_nb = group_nb, 
                         data = ode_data, 
@@ -63,7 +64,7 @@ batchsizes = [group_nb]
                         )
     p_trained = get_p_trained(res)
     @test all(isapprox.(p_trained[:r], p_true[:r], atol = 1e-3))
-    @test length(res.losses) == sum(epochs) + 1
+    @test length(res.losses) == sum(epochs) 
     @test all(isapprox.(res.u0s_trained[1], u0, atol = 1e-3))
 end
 
@@ -92,28 +93,21 @@ model = NNMap(ModelParams(;p=p_init,
                                 ))
 
 infprob = InferenceProblem(model, p_init)
-optimizers = [ADAM(0.01)]
+optimizers = [OptimizationOptimisers.Adam(0.01)]
 epochs = [1000]
 group_nb = 20
 batchsizes = [group_nb]
-@testset "piecewise inference with `AnalyticModel" begin
+@testset "piecewise inference with `ARModel` and neural net" begin
     res = inference(infprob;
-                        group_nb = group_nb, 
-                        data = ode_data, 
-                        tsteps = tsteps, 
-                        epochs = epochs, 
-                        optimizers = optimizers,
-                        multi_threading=false
-                        )
+                    group_nb = group_nb, 
+                    data = ode_data, 
+                    tsteps = tsteps, 
+                    epochs = epochs, 
+                    optimizers = optimizers,
+                    multi_threading=false
+                    )
     p_trained = get_p_trained(res)
-    @test length(res.losses) == sum(epochs) + 1
+    @test length(res.losses) == sum(epochs)
 
-    if false
-        p = Plots.plot(tsteps, ode_data[:])
-        for (i, r) in enumerate(res.ranges)
-            Plots.plot!(tsteps[r], res.pred[i][:],  color="red", linestyle=:dash)
-        end
-        display(p)
-    end
     @test res.losses[end] < 1e-3
 end

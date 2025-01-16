@@ -43,14 +43,13 @@ infprob = InferenceProblem(model, p_init)
 
  
 @testset "Testing correct behavior `piecewise_loss`" begin
-    l, pred = piecewise_loss(infprob,
+    l = piecewise_loss(infprob,
                         θ, 
                         ode_data, 
                         tsteps, 
                         ranges,
                         1:length(ranges))
     @test isa(l, Number)
-    @test isa(pred, Vector)
 end
 
 @testset "Testing differentiability `piecewise_loss`" begin

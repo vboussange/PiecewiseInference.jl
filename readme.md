@@ -23,7 +23,6 @@ using Pkg; Pkg.add(url="https://github.com/vboussange/PiecewiseInference.jl")
 
 That's it! This will download the latest version of **PiecewiseInference.jl** from this git repo and download all dependencies.
 
-
 ## Getting started
 
 Check out [this blog post](https://vboussange.github.io/post/piecewiseinference/) providing a hands-on tutorial.
@@ -31,6 +30,9 @@ See also the API documentation and the `test` folder.
 
 ## Related packages
 `DiffEqFlux` is a package with similar goals as `PiecewiseInference`, and proposes the method `DiffEqFlux.multiple_shooting`, which is close to `PiecewiseInference.inference` but where initial conditions are not inferred. `PiecewiseInference` further proposes several utility methods for model selection.
+
+## Roadmap
+- [ ] Allow for neural network requiring state updates
 
 ## Reference
 Boussange, V., Vilimelis-Aceituno, P., Schäfer, F., Pellissier, L., _Partitioning time series to improve process-based models with machine learning_. [[bioRxiv]](https://www.biorxiv.org/content/10.1101/2022.07.25.501365v2) (2024), 46 pages.

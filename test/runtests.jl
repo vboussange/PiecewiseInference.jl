@@ -15,12 +15,4 @@ using Distributions
     include("piecewise_loss.jl")
     include("inference.jl")
     # include("statistics.jl")
-    include("evidence.jl")
-end
-
-if false # testing plot recipes
-    @testset "PiecewiseInference" begin
-        using PyPlot  # to test plot_convergence
-        include("plot_convergence.jl")
-    end
 end

@@ -11,7 +11,6 @@ function piecewise_ML_indep_TS(infprob;
                                 group_size = nothing, 
                                 group_nb = nothing,
                                 tsteps::Vector, #corresponding time steps
-                                save_pred = true, # saving prediction
                                 save_losses = true, # saving prediction
                                 kwargs...)
     @assert length(tsteps) == length(data) "Independent time series must be gathered as a Vector"
@@ -48,20 +47,12 @@ function piecewise_ML_indep_TS(infprob;
     # [[u_0_TS1_1, ..., u_0_TS1_n],...,[u_0_TS1_1,...]]
     u0s_trained_arr = [res.u0s_trained[idx_res[i]+1:idx_res[i+1]] for i in 1:length(data)]
     
-    if save_pred
-        # group back the time series in vector, to have
-        # pred = [ [mibibatch_1_ts_1, mibibatch_2_ts_1...],  [mibibatch_1_ts_2, mibibatch_2_ts_2...] ...]
-        pred_arr = [res.pred[idx_res[i]+1:idx_res[i+1]] for i in 1:length(data)]
-    else
-        pred_arr = nothing
-    end
     save_losses ? losses = res.losses : losses = nothing
 
     res_arr = InferenceResult(infprob,
                             res.minloss,
                             res.p_trained,
                             u0s_trained_arr, 
-                            pred_arr, 
                             ranges_arr, 
                             losses,)
     return res_arr
@@ -95,11 +86,7 @@ $(SIGNATURES) performs piecewise inference for a given `InferenceProblem` and
 - `verbose_loss` : Whether to display loss during training.
 - `info_per_its = 50`: The frequency at which to display the training
   information.
-- `plotting` :  Whether to plot the convergence loss during training.
-- `cb` :  A call back function. Must be of the form `cb(p_trained, losses, pred,
-  ranges)`.
-- `threshold` : The tolerance for stopping training.
-- `save_pred = true`: Whether to save the predictions.
+- `cb` :  A call back function. Must be of the form `cb(state, l)`, see [here](https://docs.sciml.ai/Optimization/stable/API/solve/#Common-Solver-Options-(Solve-Keyword-Arguments)) for more information.
 - `save_losses = true` : Whether to save the losses.
 - `adtype = Optimization.AutoForwardDiff()` : The automatic differentiation (AD)
   type to be used. Can be `Optimization.AutoForwardDiff()` for forward AD or
@@ -113,7 +100,7 @@ Optimization.Autozygote()`
 ```julia
 using SciMLSensitivity # provides diffential equation sensitivity methods
 using UnPack # provides the utility macro @unpack 
-using OptimizationOptimisers, OptimizationFlux # provide the optimizers
+using OptimizationOptimisers # provide the optimizers
 using LinearAlgebra
 using PiecewiseInference
 using OrdinaryDiffEq
@@ -152,7 +139,7 @@ distrib_noise = MvNormal(ones(2) * σ_noise^2)
 # defining `loss_likelihood`
 loss_likelihood(data, pred, tsteps) = sum(logpdf(distrib_noise, data .- pred))
 infprob = InferenceProblem(model, p_init; p_bij, u0_bij)
-optimizers = [ADAM(0.001)]
+optimizers = [OptimizationOptimisers.Adam(0.001)]
 epochs = [5000]
 group_nb = 2
 batchsizes = [1] # batch size used for each optimizer in optimizers (here only one)
@@ -174,15 +161,12 @@ function inference(infprob;
                     group_size = nothing, 
                     group_nb = nothing,
                     ranges = nothing, # provided by `inference`
-                    optimizers = [ADAM(0.01), BFGS(initial_stepnorm=0.01)],
+                    optimizers = [OptimizationOptimisers.Adam(0.01), OptimizationOptimJL.BFGS(initial_stepnorm=0.01)],
                     epochs = [1000, 200],
                     batchsizes = nothing,
                     verbose_loss = true,
-                    plotting = false,
                     info_per_its=50,
                     cb = nothing,
-                    threshold = -Inf,
-                    save_pred = true,
                     save_losses = true,
                     u0s_init = nothing,
                     adtype = Optimization.AutoForwardDiff(),
@@ -200,7 +184,7 @@ function inference(infprob;
         ranges = get_ranges(;group_size, group_nb, datasize)
     end
 
-    idx_ranges = (1:length(ranges),) # idx of batches
+    idx_ranges = 1:length(ranges) # idx of batches
 
     isnothing(batchsizes) && (batchsizes = fill(length(ranges),length(epochs)))
 
@@ -208,8 +192,8 @@ function inference(infprob;
     @assert ((size(data,1) == dim_prob) || !isnothing(u0s_init)) "The dimension of the training data does not correspond to the dimension of the state variables. This probably means that the training data corresponds to observables different from the state variables. In this case, you need to provide manually `u0s_init`." 
     for (i,opt) in enumerate(optimizers)
         OPT = typeof(opt)
-        if OPT <: Union{Optim.AbstractOptimizer, Optim.Fminbox, Optim.SAMIN, Optim.ConstrainedOptimizer}
-            @assert batchsizes[i] == length(idx_ranges...) "$OPT is not compatible with mini-batches - use `batchsizes = group_nb`"
+        if OPT <: Optim.AbstractOptimizer
+            @assert batchsizes[i] == length(idx_ranges) "$OPT is not compatible with mini-batches - use `batchsizes = group_nb`"
         end
     end
     p0 = get_p(infprob)
@@ -221,48 +205,33 @@ function inference(infprob;
     end
     # build θ, which is the parameter vector containing u0s, in the parameter space
 
-    θ = _build_θ(p0, u0s_init, infprob)
+    θ_0 = _build_θ(p0, u0s_init, infprob)
 
     # piecewise loss
-    function _loss(θ, idx_rngs)
+    function _loss(θ, batch_idx_ranges)
         return piecewise_loss(infprob,
                             θ, 
                             data, 
                             tsteps, 
                             ranges,
-                            idx_rngs,
+                            batch_idx_ranges,
                             multi_threading)
     end
-    __loss(x, p, idx_rngs=idx_ranges...) = _loss(x, idx_rngs) #used for the "Optimization function"
 
     nb_group = length(ranges)
     println("inference with $(length(tsteps)) points and $nb_group groups.")
 
     # Here we need a default behavior for Optimization.jl (see https://github.com/SciML/Optimization.jl/blob/c0a51120c7c54a89d091b599df30eb40c4c0952b/lib/OptimizationFlux/src/OptimizationFlux.jl#L53)
-    callback(state, l, pred=[]) = begin
+    callback(state, l) = begin
         push!(losses, l)
-        p_trained = to_param_space(state.u, infprob)
         # TODO: this is called at every parameter update, it would be nice to have it at every epoch
         if length(losses)%info_per_its==0
             verbose_loss && (println("Loss after $(length(losses)) iterations: $(losses[end])"))
         end
         if !isnothing(cb)
-            cb(p_trained, losses, pred, ranges)
-        elseif plotting
-            if length(losses)%info_per_its==0
-                plot_convergence(losses, 
-                                pred, 
-                                data, 
-                                ranges, 
-                                tsteps)
-            end
+            cb(state, l)
         end
-        if l < threshold
-            println("❤ Threshold met ❤")
-            return true
-        else
-            return false
-        end
+        return false
     end
 
     ################
@@ -272,41 +241,29 @@ function inference(infprob;
     losses = eltype(data)[]
 
     @info "Training started"
-    objectivefun = OptimizationFunction(__loss, adtype) # similar to https://sensitivity.sciml.ai/stable/ode_fitting/stiff_ode_fit/
+    objectivefun = OptimizationFunction(_loss, adtype) # similar to https://sensitivity.sciml.ai/stable/ode_fitting/stiff_ode_fit/
     opt = first(optimizers)
-    optprob = Optimization.OptimizationProblem(objectivefun, θ)
-    res = __solve(opt, optprob, idx_ranges, batchsizes[1], epochs[1], callback)
-    u0 = res.minimizer
+    θ = __solve(opt, objectivefun, θ_0, idx_ranges, first(batchsizes), first(epochs), callback)
     for (i, opt) in enumerate(optimizers[2:end])
-        optprob = remake(optprob, u0=u0)
-        res = __solve(optimizers[i+1], optprob, idx_ranges, batchsizes[i+1], epochs[i+1], callback)
-        u0 = res.minimizer
+        θ = __solve(opt, objectivefun, θ, idx_ranges, batchsizes[i+1], epochs[i+1], callback)
     end
     
-    minloss, pred = _loss(u0, idx_ranges...)
-    p_trained = to_param_space(u0, infprob)
+    
+    minloss = _loss(θ, idx_ranges)
+    p_trained = to_param_space(θ, infprob)
 
-    u0s_trained = [_get_u0s(infprob, u0, i, nb_group) for i in 1:nb_group]
+    u0s_trained = [_get_u0s(infprob, θ, i, nb_group) for i in 1:nb_group]
 
     @info "Minimum loss for all batches: $minloss"
     if !isnothing(cb)
         cb(p_trained, losses, pred, ranges)
     end
-    if plotting
-        plot_convergence(losses, 
-                        pred, 
-                        data, 
-                        ranges, 
-                        tsteps,)
-    end
     
-    save_pred ? nothing : pred = nothing
     save_losses ? nothing : losses = nothing
     res = InferenceResult(infprob,
                             minloss, 
                             p_trained,
                             u0s_trained,
-                            pred, 
                             ranges, 
                             losses,)
     return res
@@ -341,115 +298,120 @@ function get_ranges(;group_size = nothing, group_nb = nothing, datasize)
     
 end
 
-"""
-$(SIGNATURES)
-
-Performs a iterative piecewise MLE, iterating over `group_sizes`. 
-Stops the iteration when loss function increases between two iterations.
-
-Returns an array with all `InferenceResult` obtained during the iteration.
-For kwargs, see `inference`.
-
-# Note 
-- for now, does not support independent time series (`piecewise_ML_indep_TS`).
-- at every iteration, initial conditions are initialised given the predition of previous iterations
-
-# Specific arguments
-- `group_sizes` : array of group sizes to test
-- `optimizers_array`: optimizers_array[i] is an array of optimizers for the trainging process of `group_sizes[i]`
-"""
-function iterative_inference(infprob;group_sizes = nothing,
-                                group_nbs = nothing,
-                                optimizers_array,
-                                threshold = 1e-16,
-                                kwargs...)
-
-    @assert length(group_sizes) == length(optimizers_array)
-
-    # initialising results
-    data = kwargs[:data]
-    datasize = size(data,2)
-    p_trained = get_p(infprob)
-    res = InferenceResult(infprob,
-                        Inf,
-                        p_trained,
-                        Vector{Float64}[],
-                        [data], 
-                        [1:datasize],
-                        Float64[])
-    res_array = InferenceResult[]
-
-    if !isnothing(group_sizes)
-        ranges_arr = [get_ranges(; group_size = gs, datasize) for gs in group_sizes]
-    elseif !isnothing(group_nbs)
-        ranges_arr = [get_ranges(; group_nb = gn, datasize) for gn in group_numbers]
-    else
-        ArgumentError("Provide whether `group_sizes` or `group_nbs` keyword arguments")
-    end
-    for (i,ranges) in enumerate(ranges_arr)
-        println("***************\nIterative training with $(length(ranges)) segment(s)\n***************")
-
-        u0s_init = _initialise_u0s_iterative_piecewise_ML(res.pred,res.ranges,ranges)
-        tempres = inference(infprob;
-                                ranges = ranges, 
-                                optimizers = optimizers_array[i],
-                                u0s_init = u0s_init,
-                                threshold = threshold,
-                                kwargs...)
-        if tempres.minloss < res.minloss || tempres.minloss < threshold # if threshold is met, we can go one level above
-            push!(res_array, tempres)
-            res = tempres
-        else
-            break
-        end
-    end
-    return res_array
-end
-
-function _initialise_u0s_iterative_piecewise_ML(pred, ranges_pred, ranges_2)
-    dim_prob = size(first(pred),1)
-    u0_2 = [zeros(eltype(first(pred)), dim_prob) for i in 1:length(ranges_2)]
-    for (i, rng2) in enumerate(ranges_2)
-        _r = first(rng2) # index of new initial condtions on the time steps
-        for j in 0:length(ranges_pred)-1
-            #=
-            NOTE : here we traverse ranges_pred in descending order, to handle overlaps in ranges.
-            Indeed, suppose we go in asending order.
-            if _r == last(rng), it also means that _r == first(next rng),
-            and in this case pred(first(next rng)) estimate is more accurate (all pred in the range depend on its value).
-            =#
-            rng = ranges_pred[end-j]
-            if _r in rng
-                ui_pred = reshape(pred[end-j][:, _r .== rng],:)
-                u0_2[i] .= ui_pred
-                break
-            end
-        end
-    end
-    return u0_2
-end
-
-function __solve(opt::OPT, optprob, idx_ranges, batchsizes, epochs, callback) where OPT <: Union{Optim.AbstractOptimizer, 
-                                                                                                Optim.Fminbox,
-                                                                                                Optim.SAMIN, 
-                                                                                                Optim.ConstrainedOptimizer}
-    @info "Running optimizer $OPT"
+# This supports batching
+function __solve(opt::OPT, objectivefun, θ_0, idx_ranges, batchsize, epochs, callback) where OPT <: Optimisers.AbstractRule
+    train_loader = MLUtils.DataLoader(idx_ranges; batchsize, shuffle = true, partial=true)
+    optprob = Optimization.OptimizationProblem(objectivefun, θ_0, train_loader)
+    @info "Running optimizer $(OPT)"
     res = Optimization.solve(optprob,
-                            opt,
-                            maxiters = epochs, 
-                            callback = callback)
-    return res
-end
-
-function __solve(opt::OPT, optprob, idx_ranges, batchsizes, epochs, callback) where OPT
-    @info "Running optimizer $OPT"
-    train_loader = Flux.DataLoader(idx_ranges; batchsize = batchsizes, shuffle = true, partial=true)
-    res = Optimization.solve(optprob,
-                            opt, 
-                            ncycle(train_loader, epochs),
+                            opt;
+                            epochs=epochs,
                             callback=callback)
-    return res
+    return res.u
 end
+
+# this does not support batching, batchsizes
+function __solve(opt::OPT, objectivefun, θ_0, idx_ranges, batchsize, epochs, callback) where OPT <: Optim.AbstractOptimizer
+    @assert batchsize == length(idx_ranges)
+    objectivefun_nobatch = OptimizationFunction((u, p) -> objectivefun.f(u, idx_ranges), objectivefun.adtype)
+    optprob = Optimization.OptimizationProblem(objectivefun_nobatch, θ_0, nothing)
+    
+    @info "Running optimizer $(OPT)"
+    res = Optimization.solve(optprob,
+                            opt;
+                            maxiters=epochs,
+                            callback=callback)
+    return res.u
+end
+
+# DEPRECATED
+# """
+# $(SIGNATURES)
+
+# Performs a iterative piecewise MLE, iterating over `group_sizes`. 
+# Stops the iteration when loss function increases between two iterations.
+
+# Returns an array with all `InferenceResult` obtained during the iteration.
+# For kwargs, see `inference`.
+
+# # Note 
+# - for now, does not support independent time series (`piecewise_ML_indep_TS`).
+# - at every iteration, initial conditions are initialised given the predition of previous iterations
+
+# # Specific arguments
+# - `group_sizes` : array of group sizes to test
+# - `optimizers_array`: optimizers_array[i] is an array of optimizers for the trainging process of `group_sizes[i]`
+# """
+# function iterative_inference(infprob;group_sizes = nothing,
+#                                 group_nbs = nothing,
+#                                 optimizers_array,
+#                                 threshold = 1e-16,
+#                                 kwargs...)
+
+#     @assert length(group_sizes) == length(optimizers_array)
+
+#     # initialising results
+#     data = kwargs[:data]
+#     datasize = size(data,2)
+#     p_trained = get_p(infprob)
+#     res = InferenceResult(infprob,
+#                         Inf,
+#                         p_trained,
+#                         Vector{Float64}[],
+#                         [data], 
+#                         [1:datasize],
+#                         Float64[])
+#     res_array = InferenceResult[]
+
+#     if !isnothing(group_sizes)
+#         ranges_arr = [get_ranges(; group_size = gs, datasize) for gs in group_sizes]
+#     elseif !isnothing(group_nbs)
+#         ranges_arr = [get_ranges(; group_nb = gn, datasize) for gn in group_numbers]
+#     else
+#         ArgumentError("Provide whether `group_sizes` or `group_nbs` keyword arguments")
+#     end
+#     for (i,ranges) in enumerate(ranges_arr)
+#         println("***************\nIterative training with $(length(ranges)) segment(s)\n***************")
+
+#         u0s_init = _initialise_u0s_iterative_piecewise_ML(res.pred,res.ranges,ranges)
+#         tempres = inference(infprob;
+#                                 ranges = ranges, 
+#                                 optimizers = optimizers_array[i],
+#                                 u0s_init = u0s_init,
+#                                 threshold = threshold,
+#                                 kwargs...)
+#         if tempres.minloss < res.minloss || tempres.minloss < threshold # if threshold is met, we can go one level above
+#             push!(res_array, tempres)
+#             res = tempres
+#         else
+#             break
+#         end
+#     end
+#     return res_array
+# end
+
+# function _initialise_u0s_iterative_piecewise_ML(pred, ranges_pred, ranges_2)
+#     dim_prob = size(first(pred),1)
+#     u0_2 = [zeros(eltype(first(pred)), dim_prob) for i in 1:length(ranges_2)]
+#     for (i, rng2) in enumerate(ranges_2)
+#         _r = first(rng2) # index of new initial condtions on the time steps
+#         for j in 0:length(ranges_pred)-1
+#             #=
+#             NOTE : here we traverse ranges_pred in descending order, to handle overlaps in ranges.
+#             Indeed, suppose we go in asending order.
+#             if _r == last(rng), it also means that _r == first(next rng),
+#             and in this case pred(first(next rng)) estimate is more accurate (all pred in the range depend on its value).
+#             =#
+#             rng = ranges_pred[end-j]
+#             if _r in rng
+#                 ui_pred = reshape(pred[end-j][:, _r .== rng],:)
+#                 u0_2[i] .= ui_pred
+#                 break
+#             end
+#         end
+#     end
+#     return u0_2
+# end
 
 function _init_u0s(data, ranges)
     u0s_init = [data[:,first(rg)] for rg in ranges]
