@@ -32,7 +32,10 @@ See also the API documentation and the `test` folder.
 `DiffEqFlux` is a package with similar goals as `PiecewiseInference`, and proposes the method `DiffEqFlux.multiple_shooting`, which is close to `PiecewiseInference.inference` but where initial conditions are not inferred. `PiecewiseInference` further proposes several utility methods for model selection.
 
 ## Roadmap
-- [ ] Allow for neural network requiring state updates
+- [ ] Support for stateful neural networks (e.g., RNNs, LSTMs) that require state updates between time steps, building on the existing `Lux.jl` integration in `ARModel`
+- [ ] Implement consistent random seed management across all test files to ensure reproducible results (currently only `test/models/odemodel.jl` uses `Random.seed!(2)`)
+- [ ] Adopt `Lux.jl`-style parameter naming syntax for `u0s` (initial conditions) to improve consistency with modern Julia ML ecosystem
+- [ ] Add more comprehensive examples and tutorials for different model types (`ODEModel`, `ARModel`, `AnalyticModel`)
 
 ## Reference
 Boussange, V., Vilimelis-Aceituno, P., Schäfer, F., Pellissier, L., _Partitioning time series to improve process-based models with machine learning_. [[bioRxiv]](https://www.biorxiv.org/content/10.1101/2022.07.25.501365v2) (2024), 46 pages.

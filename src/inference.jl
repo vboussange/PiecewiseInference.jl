@@ -86,7 +86,7 @@ $(SIGNATURES) performs piecewise inference for a given `InferenceProblem` and
 - `verbose_loss` : Whether to display loss during training.
 - `info_per_its = 50`: The frequency at which to display the training
   information.
-- `cb` :  A call back function. Must be of the form `cb(state, l)`, see [here](https://docs.sciml.ai/Optimization/stable/API/solve/#Common-Solver-Options-(Solve-Keyword-Arguments)) for more information.
+- `cb` :  A call back function. Must be of the form `cb(p, u0s, l)`.
 - `save_losses = true` : Whether to save the losses.
 - `adtype = Optimization.AutoForwardDiff()` : The automatic differentiation (AD)
   type to be used. Can be `Optimization.AutoForwardDiff()` for forward AD or
@@ -229,7 +229,9 @@ function inference(infprob;
             verbose_loss && (println("Loss after $(length(losses)) iterations: $(losses[end])"))
         end
         if !isnothing(cb)
-            cb(state, l)
+            p = to_param_space(state.u, infprob)
+            u0s = [_get_u0s(infprob, state.u, i, nb_group) for i in 1:nb_group]
+            cb(p, u0s, l)
         end
         return false
     end
@@ -255,9 +257,6 @@ function inference(infprob;
     u0s_trained = [_get_u0s(infprob, θ, i, nb_group) for i in 1:nb_group]
 
     @info "Minimum loss for all batches: $minloss"
-    if !isnothing(cb)
-        cb(p_trained, losses, pred, ranges)
-    end
     
     save_losses ? nothing : losses = nothing
     res = InferenceResult(infprob,

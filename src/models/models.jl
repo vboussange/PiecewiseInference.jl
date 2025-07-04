@@ -110,6 +110,7 @@ Structure containing the details for the numerical simulation of a model.
 mp = ModelParams()
 """
 function ModelParams(; p = nothing, tspan = nothing, u0 = nothing, alg = nothing, kwargs...)
+    @assert u0 !== nothing "Initial condition `u0` is required for inferring the dimension of the state."
     ModelParams(p,
                 tspan,
                 u0,
