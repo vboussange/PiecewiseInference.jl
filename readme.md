@@ -3,6 +3,7 @@
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://vboussange.github.io/PiecewiseInference.jl/dev/)
 [![Build status (Github Actions)](https://github.com/vboussange/PiecewiseInference.jl/workflows/CI/badge.svg)](https://github.com/vboussange/PiecewiseInference.jl/actions)
 [![codecov.io](http://codecov.io/github/vboussange/PiecewiseInference.jl/coverage.svg?branch=main)](http://codecov.io/github/vboussange/PiecewiseInference.jl?branch=main)
+[![DOI](https://zenodo.org/badge/480439170.svg)](https://doi.org/10.5281/zenodo.15806498)
 
 **PiecewiseInference.jl** is a library to enhance the convergence of dynamical model parameter inversion methods. It provides features such as
 - a segmentation strategy, 
